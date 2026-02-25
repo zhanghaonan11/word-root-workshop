@@ -1,0 +1,40 @@
+name: WordRootWorkshop
+options:
+  bundleIdPrefix: com.shan
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 1.0.0
+targets:
+  WordRootWorkshop:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: WordRootWorkshop/App
+      - path: WordRootWorkshop/Models
+      - path: WordRootWorkshop/Services
+      - path: WordRootWorkshop/Views
+      - path: WordRootWorkshop/Resources
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shan.wordrootworkshop
+        INFOPLIST_FILE: WordRootWorkshop/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_EMIT_LOC_STRINGS: YES
+  WordRootWorkshopTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: WordRootWorkshopTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.shan.wordrootworkshop.tests
+    dependencies:
+      - target: WordRootWorkshop
