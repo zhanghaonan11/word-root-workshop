@@ -11,6 +11,7 @@
 		2BE42624B1748F34DB3A8E79 /* WordRootWorkshopTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9865494E7D74BBC237EB128 /* WordRootWorkshopTests.swift */; };
 		497F8687716973DA9298FE60 /* ProgressDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459C73B076811203CE171F38 /* ProgressDashboardView.swift */; };
 		6DFEF95EAB79E81887B79A80 /* ProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2733F48397593BEDFCD3D3B0 /* ProgressModels.swift */; };
+		740E58122F4F430F00970DFC /* QuizSectionView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 740E58112F4F430F00970DFC /* QuizSectionView 2.swift */; };
 		85FEB8B894BFCC14E36D4127 /* WordRootRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0F1F9EDCF0E3E7B5D49768B /* WordRootRepository.swift */; };
 		8EF14930CA00000B6ED2D032 /* ProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A41335C6778E331DAD96F4 /* ProgressStore.swift */; };
 		9DDE0E68450D1AD90E08763F /* FlashcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8BAB12B08EF91AB87B049 /* FlashcardView.swift */; };
@@ -42,9 +43,10 @@
 		52A41335C6778E331DAD96F4 /* ProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressStore.swift; sourceTree = "<group>"; };
 		5CE8BAB12B08EF91AB87B049 /* FlashcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardView.swift; sourceTree = "<group>"; };
 		6799721DD6F07497C3742B8E /* LearnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnView.swift; sourceTree = "<group>"; };
+		740E58112F4F430F00970DFC /* QuizSectionView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QuizSectionView 2.swift"; sourceTree = "<group>"; };
 		9613ACB0E162C0D55D6A049E /* WordRootWorkshopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordRootWorkshopApp.swift; sourceTree = "<group>"; };
 		98B69C5FF311FB65AA2E942C /* wordRoots.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wordRoots.json; sourceTree = "<group>"; };
-		9A871087A643E1FB333EAABF /* WordRootWorkshopTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WordRootWorkshopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A871087A643E1FB333EAABF /* WordRootWorkshopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordRootWorkshopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A9865494E7D74BBC237EB128 /* WordRootWorkshopTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordRootWorkshopTests.swift; sourceTree = "<group>"; };
 		AFC71CA642862DF893055C5E /* WordRootModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordRootModels.swift; sourceTree = "<group>"; };
 		B4709E530F807AA4609D7B2D /* RootsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootsIndexView.swift; sourceTree = "<group>"; };
@@ -126,6 +128,7 @@
 				F09E82F22572232F5C8C23C0 /* RootDetailView.swift */,
 				B4709E530F807AA4609D7B2D /* RootsIndexView.swift */,
 				16D9C49B19E15C3D8A1AC396 /* RootUIComponents.swift */,
+				740E58112F4F430F00970DFC /* QuizSectionView 2.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -185,7 +188,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2630;
 			};
 			buildConfigurationList = 09F5D526C1DB75D53BB1FB3E /* Build configuration list for PBXProject "WordRootWorkshop" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -238,6 +241,7 @@
 				0A07829C82D9E38F5B1079E8 /* RootDetailView.swift in Sources */,
 				AE9C73E66035A11C245DB3DE /* RootTabView.swift in Sources */,
 				BA0F4E55210B0EBC9781836F /* RootUIComponents.swift in Sources */,
+				740E58122F4F430F00970DFC /* QuizSectionView 2.swift in Sources */,
 				C6177963EAB07ED60C4CAD76 /* RootsIndexView.swift in Sources */,
 				E4FC6A4D6805592D1953679B /* WordRootModels.swift in Sources */,
 				85FEB8B894BFCC14E36D4127 /* WordRootRepository.swift in Sources */,
@@ -310,8 +314,10 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 9TZ939ZKK7;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -325,6 +331,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -367,8 +374,10 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 9TZ939ZKK7;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -389,6 +398,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
@@ -416,9 +426,8 @@
 		CD42324A3BA3EE84E9990C0E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 9TZ939ZKK7;
 				INFOPLIST_FILE = WordRootWorkshop/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -435,9 +444,8 @@
 		D67787EE5C90B3DC7CFFD41B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 9TZ939ZKK7;
 				INFOPLIST_FILE = WordRootWorkshop/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

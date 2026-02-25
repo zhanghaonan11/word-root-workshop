@@ -9,7 +9,7 @@
 - 词根索引：搜索 + 前缀/词根/后缀筛选
 - 进度页：掌握统计、等级、连学天数、成就
 - 本地存储：`UserDefaults`（键与网页版一致）
-- 数据迁移：从 `js/wordData.js` 自动导出为 `wordRoots.json`
+- 数据源：使用 `ios-native/data/wordData.js` 自动导出为 `wordRoots.json`
 
 ## 首次生成与运行
 
@@ -30,10 +30,16 @@ open ios-native/WordRootWorkshop.xcodeproj
 
 ## 数据更新流程
 
-当网页端 `js/wordData.js` 更新后，重新执行：
+更新 `ios-native/data/wordData.js` 后，重新执行：
 
 ```bash
 node ios-native/scripts/export_word_roots_json.js
 ```
 
 无需改 Swift 代码即可同步词库内容。
+
+如果你希望从网页端一键同步到 iOS 数据源，可执行：
+
+```bash
+./ios-native/scripts/sync_from_web.sh
+```

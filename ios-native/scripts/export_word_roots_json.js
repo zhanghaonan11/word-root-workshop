@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
-const wordRootsPath = path.join(repoRoot, 'js', 'wordData.js');
-const outputPath = path.join(repoRoot, 'ios-native', 'WordRootWorkshop', 'Resources', 'wordRoots.json');
+const iosRoot = path.resolve(__dirname, '..');
+const wordRootsPath = path.join(iosRoot, 'data', 'wordData.js');
+const outputPath = path.join(iosRoot, 'WordRootWorkshop', 'Resources', 'wordRoots.json');
 
 const roots = require(wordRootsPath);
 if (!Array.isArray(roots) || roots.length === 0) {
