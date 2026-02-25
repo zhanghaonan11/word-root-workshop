@@ -3,6 +3,7 @@ import SwiftUI
 struct LearnView: View {
   @EnvironmentObject private var repository: WordRootRepository
   @EnvironmentObject private var progressStore: ProgressStore
+  @EnvironmentObject private var pronunciationService: PronunciationService
 
   @State private var currentIndex = 0
   @State private var quizID = UUID()
@@ -90,8 +91,19 @@ struct LearnView: View {
   @ViewBuilder
   private func rootHeader(_ root: WordRoot) -> some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text(root.root)
-        .font(.system(size: LearnViewConstants.rootFontSize, weight: .bold, design: .rounded))
+      Button {
+        pronunciationService.speak(root.root)
+      } label: {
+        HStack(spacing: 8) {
+          Text(root.root)
+            .font(.system(size: LearnViewConstants.rootFontSize, weight: .bold, design: .rounded))
+          Image(systemName: "speaker.wave.2.fill")
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(.blue)
+        }
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("播放 \(root.root) 发音")
 
       HStack(spacing: 8) {
         Text(root.origin)

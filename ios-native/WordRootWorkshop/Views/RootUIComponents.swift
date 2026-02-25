@@ -1,4 +1,41 @@
+import AVFoundation
 import SwiftUI
+
+@MainActor
+final class PronunciationService: ObservableObject {
+  private let synthesizer = AVSpeechSynthesizer()
+
+  func speak(_ text: String) {
+    let cleanedText = Self.cleanForSpeech(text)
+    guard !cleanedText.isEmpty else { return }
+
+    if synthesizer.isSpeaking {
+      synthesizer.stopSpeaking(at: .immediate)
+    }
+
+    let utterance = AVSpeechUtterance(string: cleanedText)
+    utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+    utterance.rate = 0.45
+    synthesizer.speak(utterance)
+  }
+
+  private static func cleanForSpeech(_ text: String) -> String {
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return "" }
+
+    let withoutSymbols = trimmed.replacingOccurrences(
+      of: #"[^A-Za-z\-\s']"#,
+      with: " ",
+      options: .regularExpression
+    )
+    let normalizedWhitespace = withoutSymbols.replacingOccurrences(
+      of: #"\s+"#,
+      with: " ",
+      options: .regularExpression
+    )
+    return normalizedWhitespace.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+}
 
 struct BreakdownChipsView: View {
   let breakdown: WordBreakdown
@@ -46,6 +83,7 @@ struct ExampleCardView: View {
     VStack(alignment: .leading, spacing: 10) {
       Text(example.word)
         .font(.title3.weight(.bold))
+
       BreakdownChipsView(breakdown: example.breakdown)
       Text(example.meaning)
         .font(.headline)
