@@ -137,7 +137,13 @@ struct LearnView: View {
       Text("例词解析")
         .font(.headline)
       ForEach(root.examples, id: \.word) { example in
-        ExampleCardView(example: example)
+        Button {
+          pronunciationService.speak(example.word)
+        } label: {
+          ExampleCardView(example: example)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("播放 \(example.word) 发音")
       }
     }
   }
