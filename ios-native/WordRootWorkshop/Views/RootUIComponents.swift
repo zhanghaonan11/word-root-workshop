@@ -81,8 +81,16 @@ struct ExampleCardView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text(example.word)
-        .font(.title3.weight(.bold))
+      VStack(alignment: .leading, spacing: 4) {
+        Text(example.word)
+          .font(.title3.weight(.bold))
+
+        if let phonetic = example.phonetic, !phonetic.isEmpty {
+          Text(phonetic)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+      }
 
       BreakdownChipsView(breakdown: example.breakdown)
       Text(example.meaning)

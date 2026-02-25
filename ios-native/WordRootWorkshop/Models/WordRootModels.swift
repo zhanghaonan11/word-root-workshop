@@ -54,9 +54,14 @@ struct WordRoot: Codable, Identifiable, Hashable {
 
 struct WordExample: Codable, Hashable {
   let word: String
+  let phonetic: String?
   let breakdown: WordBreakdown
   let meaning: String
   let explanation: String
+
+  private enum CodingKeys: String, CodingKey {
+    case word, phonetic, breakdown, meaning, explanation
+  }
 }
 
 struct WordBreakdown: Codable, Hashable {
