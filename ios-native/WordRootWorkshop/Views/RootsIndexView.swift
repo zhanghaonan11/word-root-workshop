@@ -20,29 +20,40 @@ struct RootsIndexView: View {
       if let loadError = repository.loadError {
         ContentUnavailableView("数据加载失败", systemImage: "exclamationmark.triangle", description: Text(loadError))
       } else {
-        List(filteredRoots) { root in
-          NavigationLink {
-            RootDetailView(rootID: root.id)
-          } label: {
-            RootRow(root: root, isMastered: progressStore.isMastered(rootID: root.id))
+        List {
+          ForEach(filteredRoots) { root in
+            NavigationLink {
+              RootDetailView(rootID: root.id)
+            } label: {
+              RootRow(root: root, isMastered: progressStore.isMastered(rootID: root.id))
+            }
           }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
       }
     }
     .navigationTitle("词根索引")
     .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜索词根、释义或例词")
+    .background(Color(.systemGroupedBackground))
     .safeAreaInset(edge: .top) {
-      Picker("分类", selection: $selectedCategory) {
-        ForEach(WordRootCategory.allCases) { category in
-          Text(category.title).tag(category)
+      VStack(spacing: 0) {
+        Picker("分类", selection: $selectedCategory) {
+          ForEach(WordRootCategory.allCases) { category in
+            Text(category.title).tag(category)
+          }
         }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
       }
-      .pickerStyle(.segmented)
-      .padding(.horizontal, 16)
-      .padding(.top, 8)
-      .padding(.bottom, 6)
-      .background(Color(.systemBackground))
+      .background(.thinMaterial)
+      .overlay(
+        Rectangle()
+          .frame(height: 1)
+          .foregroundStyle(Color(.separator).opacity(0.25)),
+        alignment: .bottom
+      )
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -113,29 +124,50 @@ private struct RootRow: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      HStack {
+      HStack(alignment: .firstTextBaseline) {
         Text(root.root)
           .font(.headline)
+
         Spacer()
+
         if isMastered {
-          Label("已掌握", systemImage: "checkmark.seal.fill")
-            .font(.caption)
-            .foregroundStyle(.green)
+          HStack(spacing: 6) {
+            Image(systemName: "checkmark.seal.fill")
+            Text("已掌握")
+          }
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.green)
+          .padding(.horizontal, 10)
+          .padding(.vertical, 6)
+          .background(
+            Capsule(style: .continuous)
+              .fill(Color.green.opacity(0.12))
+          )
         }
       }
 
       Text(root.meaning)
-        .font(.subheadline.weight(.medium))
+        .font(.subheadline.weight(.semibold))
 
-      Text("\(root.origin) · #\(root.id)")
-        .font(.footnote)
-        .foregroundStyle(.secondary)
+      HStack(spacing: 8) {
+        Text(root.origin)
+          .font(.footnote.weight(.semibold))
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(Color.blue.opacity(0.12), in: Capsule(style: .continuous))
+
+        Text("#\(root.id)")
+          .font(.footnote.monospacedDigit())
+          .foregroundStyle(.secondary)
+
+        Spacer(minLength: 0)
+      }
 
       Text(root.examples.prefix(3).map(\.word).joined(separator: "、"))
         .font(.caption)
         .foregroundStyle(.secondary)
         .lineLimit(1)
     }
-    .padding(.vertical, 4)
+    .padding(.vertical, 2)
   }
 }
