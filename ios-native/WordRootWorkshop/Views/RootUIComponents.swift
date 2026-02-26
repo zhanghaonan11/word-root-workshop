@@ -67,12 +67,7 @@ private struct MorphChip: View {
       .padding(.horizontal, 10)
       .padding(.vertical, 6)
       .foregroundStyle(color)
-      .background(color.opacity(0.12))
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .stroke(color.opacity(0.25), lineWidth: 1)
-      )
+      .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }
 
@@ -89,45 +84,44 @@ struct ExampleCardView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      VStack(alignment: .leading, spacing: 4) {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-          Text(example.word)
-            .font(.title3.weight(.bold))
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .firstTextBaseline, spacing: 10) {
+        Text(example.word)
+          .font(.title3.weight(.bold))
 
-          Button {
-            pronunciationService.speak(example.word)
-          } label: {
-            Image(systemName: "speaker.wave.2.fill")
-              .font(.subheadline.weight(.semibold))
-          }
-          .buttonStyle(.borderless)
-          .foregroundStyle(.blue)
-          .accessibilityLabel("发音")
-          .accessibilityHint("朗读单词发音")
-
-          Text(normalizedPhonetic ?? "（暂无音标）")
-            .font(.subheadline)
-            .foregroundStyle(normalizedPhonetic == nil ? .tertiary : .secondary)
+        Button {
+          pronunciationService.speak(example.word)
+        } label: {
+          Image(systemName: "speaker.wave.2.fill")
+            .font(.subheadline.weight(.semibold))
         }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.blue)
+        .accessibilityLabel("发音")
+        .accessibilityHint("朗读单词发音")
+
+        Spacer(minLength: 0)
+
+        Text(normalizedPhonetic ?? "（暂无音标）")
+          .font(.subheadline)
+          .foregroundStyle(normalizedPhonetic == nil ? .tertiary : .secondary)
       }
 
       BreakdownChipsView(breakdown: example.breakdown)
-      Text(example.meaning)
-        .font(.headline)
-      Text(example.explanation)
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
+
+      VStack(alignment: .leading, spacing: 6) {
+        Text(example.meaning)
+          .font(.headline)
+        Text(example.explanation)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+      }
     }
     .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .fill(Color(.systemBackground))
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(Color(.secondarySystemGroupedBackground))
     )
   }
 }

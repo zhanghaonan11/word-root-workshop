@@ -12,15 +12,25 @@ struct FlashcardView: View {
 
   private var roots: [WordRoot] { repository.roots }
 
+  private var safeIndex: Int {
+    guard !roots.isEmpty else { return 0 }
+    return min(max(currentIndex, 0), roots.count - 1)
+  }
+
+  private var displayIndex: Int {
+    guard !roots.isEmpty else { return 0 }
+    return safeIndex + 1
+  }
+
   private var currentRoot: WordRoot? {
     guard !roots.isEmpty else { return nil }
-    return roots[min(max(currentIndex, 0), roots.count - 1)]
+    return roots[safeIndex]
   }
 
   var body: some View {
     VStack(spacing: 16) {
       if let root = currentRoot {
-        header
+        headerCard
 
         Button {
           withAnimation(.easeInOut(duration: 0.35)) {
@@ -35,34 +45,7 @@ struct FlashcardView: View {
         .accessibilityValue(isFlipped ? "当前为背面" : "当前为正面")
         .accessibilityHint("双击可在正反面之间切换")
 
-        HStack(spacing: 12) {
-          Button {
-            prevCard()
-          } label: {
-            Label("上一个", systemImage: "chevron.left")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.bordered)
-          .accessibilityHint("切换到上一张卡片")
-
-          Button {
-            markKnown()
-          } label: {
-            Label("已掌握", systemImage: "checkmark")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.borderedProminent)
-          .accessibilityHint("将当前词根标记为已掌握，并自动切换下一张")
-
-          Button {
-            nextCard()
-          } label: {
-            Label("下一个", systemImage: "chevron.right")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.bordered)
-          .accessibilityHint("切换到下一张卡片")
-        }
+        controlButtons
       } else if let loadError = repository.loadError {
         ContentUnavailableView("数据加载失败", systemImage: "exclamationmark.triangle", description: Text(loadError))
       } else {
@@ -73,32 +56,76 @@ struct FlashcardView: View {
     }
     .padding(16)
     .navigationTitle("闪卡")
+    .background(Color(.systemGroupedBackground))
     .onAppear(perform: syncCurrentIndex)
     .onChange(of: repository.roots.count) { _, _ in
       syncCurrentIndex()
     }
   }
 
-  private var header: some View {
-    HStack {
-      Text("\(displayIndex)/\(max(roots.count, 1))")
-        .font(.headline)
-        .accessibilityLabel("当前卡片位置")
-        .accessibilityValue("第 \(displayIndex) 张，共 \(max(roots.count, 1)) 张")
+  private var headerCard: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        Text("\(displayIndex)/\(max(roots.count, 1))")
+          .font(.headline)
+          .monospacedDigit()
+          .accessibilityLabel("当前卡片位置")
+          .accessibilityValue("第 \(displayIndex) 张，共 \(max(roots.count, 1)) 张")
 
-      Spacer()
+        Spacer()
 
-      Text("已掌握: \(progressStore.masteredCount)")
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .accessibilityLabel("已掌握词根数")
-        .accessibilityValue("\(progressStore.masteredCount)")
+        HStack(spacing: 6) {
+          Image(systemName: "checkmark.seal.fill")
+            .foregroundStyle(.green)
+          Text("已掌握 \(progressStore.masteredCount)")
+            .foregroundStyle(.secondary)
+        }
+        .font(.subheadline.weight(.semibold))
+      }
+
+      ProgressView(value: Double(displayIndex), total: Double(max(roots.count, 1)))
+        .tint(.yellow)
     }
+    .padding(16)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(.thinMaterial)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .stroke(Color(.separator).opacity(0.20), lineWidth: 1)
+    )
   }
 
-  private var displayIndex: Int {
-    guard !roots.isEmpty else { return 0 }
-    return min(max(currentIndex, 0), roots.count - 1) + 1
+  private var controlButtons: some View {
+    HStack(spacing: 12) {
+      Button {
+        prevCard()
+      } label: {
+        Label("上一个", systemImage: "chevron.left")
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.bordered)
+      .accessibilityHint("切换到上一张卡片")
+
+      Button {
+        markKnown()
+      } label: {
+        Label("已掌握", systemImage: "checkmark")
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.borderedProminent)
+      .accessibilityHint("将当前词根标记为已掌握，并自动切换下一张")
+
+      Button {
+        nextCard()
+      } label: {
+        Label("下一个", systemImage: "chevron.right")
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.bordered)
+      .accessibilityHint("切换到下一张卡片")
+    }
   }
 
   private func syncCurrentIndex() {
@@ -109,14 +136,14 @@ struct FlashcardView: View {
 
   private func nextCard() {
     guard !roots.isEmpty else { return }
-    currentIndex = (currentIndex + 1) % roots.count
+    currentIndex = (safeIndex + 1) % roots.count
     progressStore.setCurrentRootIndex(currentIndex)
     isFlipped = false
   }
 
   private func prevCard() {
     guard !roots.isEmpty else { return }
-    currentIndex = (currentIndex - 1 + roots.count) % roots.count
+    currentIndex = (safeIndex - 1 + roots.count) % roots.count
     progressStore.setCurrentRootIndex(currentIndex)
     isFlipped = false
   }
@@ -151,8 +178,8 @@ private struct FlashcardContent: View {
 
   var body: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(Color(.secondarySystemBackground))
+      RoundedRectangle(cornerRadius: 22, style: .continuous)
+        .fill(Color(.secondarySystemGroupedBackground))
         .frame(maxWidth: .infinity)
         .aspectRatio(3.0 / 2.0, contentMode: .fit)
 
@@ -163,8 +190,8 @@ private struct FlashcardContent: View {
         .opacity(isFlipped ? 1 : 0)
     }
     .overlay(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(Color(.separator), lineWidth: 1)
+      RoundedRectangle(cornerRadius: 22, style: .continuous)
+        .stroke(Color(.separator).opacity(0.18), lineWidth: 1)
     )
     .rotation3DEffect(
       .degrees(isFlipped ? 180 : 0),
@@ -194,7 +221,7 @@ private struct FlashcardContent: View {
         .foregroundStyle(.secondary)
         .padding(.top, 8)
     }
-    .padding(20)
+    .padding(22)
     .accessibilityElement(children: .combine)
     .accessibilityLabel("词根卡片正面")
     .accessibilityValue("\(root.root)，含义 \(root.meaning)，来源 \(root.origin)")
@@ -214,14 +241,14 @@ private struct FlashcardContent: View {
 
       Divider()
 
-      ForEach(root.examples.prefix(3), id: \.word) { ex in
+      ForEach(Array(root.examples.prefix(3).enumerated()), id: \.offset) { _, ex in
         Text("• \(ex.word)：\(ex.meaning)")
           .font(.footnote)
           .lineLimit(2)
           .minimumScaleFactor(0.85)
       }
     }
-    .padding(18)
+    .padding(20)
     .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
     .accessibilityElement(children: .combine)
     .accessibilityLabel("词根卡片背面")

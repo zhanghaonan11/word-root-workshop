@@ -16,21 +16,29 @@ struct QuizSectionView: View {
       Text(quiz.question)
         .font(.title3.weight(.semibold))
 
-      ForEach(Array(quiz.options.enumerated()), id: \.offset) { idx, option in
-        Button {
-          submitAnswer(index: idx)
-        } label: {
-          HStack {
-            Text(option)
-              .frame(maxWidth: .infinity, alignment: .leading)
-            feedbackIcon(for: idx)
+      VStack(spacing: 10) {
+        ForEach(Array(quiz.options.enumerated()), id: \.offset) { idx, option in
+          Button {
+            submitAnswer(index: idx)
+          } label: {
+            HStack(spacing: 10) {
+              Text(option)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+              feedbackIcon(for: idx)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .contentShape(Rectangle())
           }
-          .padding(12)
-          .background(answerBackground(for: idx))
-          .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+          .buttonStyle(.plain)
+          .background(answerBackground(for: idx), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+              .stroke(borderColor(for: idx), lineWidth: 1)
+          )
+          .disabled(hasSubmitted)
         }
-        .buttonStyle(.plain)
-        .disabled(hasSubmitted)
       }
 
       if hasSubmitted {
@@ -49,8 +57,11 @@ struct QuizSectionView: View {
         }
       }
     }
-    .padding(14)
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .padding(16)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(Color(.secondarySystemGroupedBackground))
+    )
   }
 
   @ViewBuilder
@@ -63,7 +74,27 @@ struct QuizSectionView: View {
         Image(systemName: "xmark.circle.fill")
           .foregroundStyle(.red)
       }
+    } else if selectedAnswer == index {
+      Image(systemName: "checkmark")
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(.secondary)
     }
+  }
+
+  private func borderColor(for index: Int) -> Color {
+    guard hasSubmitted else {
+      return selectedAnswer == index ? Color.accentColor.opacity(0.35) : Color(.separator).opacity(0.20)
+    }
+
+    if quiz.hasValidCorrectAnswer, index == quiz.correctAnswer {
+      return Color.green.opacity(0.35)
+    }
+
+    if index == selectedAnswer {
+      return Color.red.opacity(0.30)
+    }
+
+    return Color(.separator).opacity(0.18)
   }
 
   private func answerBackground(for index: Int) -> Color {
@@ -72,11 +103,11 @@ struct QuizSectionView: View {
     }
 
     if quiz.hasValidCorrectAnswer, index == quiz.correctAnswer {
-      return Color.green.opacity(0.18)
+      return Color.green.opacity(0.14)
     }
 
     if index == selectedAnswer {
-      return Color.red.opacity(0.16)
+      return Color.red.opacity(0.12)
     }
 
     return Color(.systemBackground)
@@ -96,10 +127,5 @@ struct QuizSectionView: View {
   private var correctOptionText: String {
     guard quiz.hasValidCorrectAnswer else { return "（无）" }
     return quiz.options[quiz.correctAnswer]
-  }
-
-  func resetState() {
-    selectedAnswer = nil
-    hasSubmitted = false
   }
 }
