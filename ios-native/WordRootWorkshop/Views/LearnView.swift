@@ -13,28 +13,38 @@ struct LearnView: View {
     repository.roots.count
   }
 
+  private var safeIndex: Int {
+    guard totalCount > 0 else { return 0 }
+    return min(max(currentIndex, 0), totalCount - 1)
+  }
+
+  private var safeDisplayIndex: Int {
+    guard totalCount > 0 else { return 0 }
+    return safeIndex + 1
+  }
+
+  private var completionRatio: Double {
+    guard totalCount > 0 else { return 0 }
+    return min(max(Double(safeDisplayIndex) / Double(totalCount), 0), 1)
+  }
+
   private var currentRoot: WordRoot? {
     guard totalCount > 0 else { return nil }
-    let safeIndex = min(max(currentIndex, 0), totalCount - 1)
     return repository.roots[safeIndex]
   }
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 18) {
-        progressHeader
+      VStack(alignment: .leading, spacing: 16) {
+        heroProgressCard
 
         if let loadError = repository.loadError {
           ContentUnavailableView("数据加载失败", systemImage: "exclamationmark.triangle", description: Text(loadError))
+            .frame(maxWidth: .infinity)
         } else if let root = currentRoot {
-          rootHeader(root)
-          descriptionSection(root)
-          examplesSection(root)
-
-          QuizSectionView(quiz: root.quiz, rootID: root.id) {
-            progressStore.markRootAsMastered(root.id)
-          }
-          .id(quizID)
+          rootCard(root)
+          quizCard(root)
+          examplesCard(root)
 
           Button {
             moveToNextRoot()
@@ -53,51 +63,143 @@ struct LearnView: View {
       .padding(16)
     }
     .navigationTitle("学习")
+    .background(Color(.systemGroupedBackground))
     .onAppear(perform: syncCurrentIndex)
     .onChange(of: repository.roots.count) { _, _ in
       syncCurrentIndex()
     }
   }
 
-  private var progressHeader: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack {
-        Text("当前进度")
-          .font(.headline)
-        Spacer()
-        Text("\(safeDisplayIndex)/\(max(totalCount, 1))")
-          .font(.subheadline.weight(.semibold))
-          .accessibilityLabel("学习进度")
-          .accessibilityValue("第 \(safeDisplayIndex) 个，共 \(max(totalCount, 1)) 个")
+  private var heroProgressCard: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .center, spacing: 14) {
+        progressRing
+
+        VStack(alignment: .leading, spacing: 8) {
+          HStack {
+            Text("学习进度")
+              .font(.headline)
+            Spacer()
+            Text("\(safeDisplayIndex)/\(max(totalCount, 1))")
+              .font(.subheadline.weight(.semibold))
+              .monospacedDigit()
+              .foregroundStyle(.secondary)
+          }
+
+          HStack(spacing: 10) {
+            metricPill(icon: "checkmark.seal.fill", text: "已掌握 \(progressStore.masteredCount)", tint: .green)
+            metricPill(icon: "star.fill", text: "Lv.\(progressStore.progress.level)", tint: .yellow)
+            metricPill(icon: "flame.fill", text: "\(progressStore.progress.studyStreak) 天", tint: .orange)
+          }
+          .font(.subheadline)
+        }
+
+        Spacer(minLength: 0)
       }
 
       ProgressView(value: Double(safeDisplayIndex), total: Double(max(totalCount, 1)))
+        .tint(.yellow)
         .accessibilityLabel("学习进度条")
         .accessibilityValue("\(safeDisplayIndex) / \(max(totalCount, 1))")
-
-      HStack {
-        Label("已掌握 \(progressStore.masteredCount)", systemImage: "checkmark.seal.fill")
-          .foregroundStyle(.secondary)
-          .accessibilityLabel("已掌握词根数")
-          .accessibilityValue("\(progressStore.masteredCount)")
-
-        Spacer()
-
-        Text("Lv.\(progressStore.progress.level)")
-          .font(.subheadline.weight(.semibold))
-          .accessibilityLabel("当前等级")
-          .accessibilityValue("等级 \(progressStore.progress.level)")
-      }
-      .font(.subheadline)
     }
-    .padding(14)
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .padding(16)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(.thinMaterial)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .stroke(Color(.separator).opacity(0.20), lineWidth: 1)
+    )
   }
 
-  private var safeDisplayIndex: Int {
-    guard totalCount > 0 else { return 0 }
-    let safeIndex = min(max(currentIndex, 0), totalCount - 1)
-    return safeIndex + 1
+  private var progressRing: some View {
+    ZStack {
+      Circle()
+        .stroke(Color(.tertiarySystemFill), lineWidth: 10)
+
+      Circle()
+        .trim(from: 0, to: completionRatio)
+        .stroke(
+          AngularGradient(
+            gradient: Gradient(colors: [.yellow, .orange, .pink, .yellow]),
+            center: .center
+          ),
+          style: StrokeStyle(lineWidth: 10, lineCap: .round)
+        )
+        .rotationEffect(.degrees(-90))
+
+      VStack(spacing: 2) {
+        Text("\(Int(completionRatio * 100))%")
+          .font(.title3.weight(.bold))
+          .monospacedDigit()
+        Text("完成")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .frame(width: 84, height: 84)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("整体学习进度")
+    .accessibilityValue("\(Int(completionRatio * 100))%，第 \(safeDisplayIndex) 个，共 \(max(totalCount, 1)) 个")
+  }
+
+  private func metricPill(icon: String, text: String, tint: Color) -> some View {
+    HStack(spacing: 6) {
+      Image(systemName: icon)
+        .foregroundStyle(tint)
+      Text(text)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 6)
+    .background(
+      Capsule(style: .continuous)
+        .fill(Color(.secondarySystemGroupedBackground))
+    )
+  }
+
+  private func rootCard(_ root: WordRoot) -> some View {
+    VStack(alignment: .leading, spacing: 14) {
+      rootHeader(root)
+
+      VStack(alignment: .leading, spacing: 8) {
+        Text("详细说明")
+          .font(.headline)
+        Text(root.description)
+          .font(.body)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .padding(16)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(Color(.secondarySystemGroupedBackground))
+    )
+  }
+
+  private func quizCard(_ root: WordRoot) -> some View {
+    QuizSectionView(quiz: root.quiz, rootID: root.id) {
+      progressStore.markRootAsMastered(root.id)
+    }
+    .id(quizID)
+    .padding(.vertical, 2)
+  }
+
+  private func examplesCard(_ root: WordRoot) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Text("例词解析")
+          .font(.headline)
+        Spacer()
+      }
+
+      ForEach(Array(root.examples.enumerated()), id: \.offset) { _, example in
+        ExampleCardView(example: example)
+      }
+    }
   }
 
   @ViewBuilder
@@ -133,30 +235,6 @@ struct LearnView: View {
           .font(.title3.weight(.semibold))
           .lineLimit(2)
           .minimumScaleFactor(0.85)
-      }
-    }
-  }
-
-  @ViewBuilder
-  private func descriptionSection(_ root: WordRoot) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("详细说明")
-        .font(.headline)
-      Text(root.description)
-        .font(.body)
-        .foregroundStyle(.secondary)
-    }
-    .padding(14)
-    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-  }
-
-  @ViewBuilder
-  private func examplesSection(_ root: WordRoot) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("例词解析")
-        .font(.headline)
-      ForEach(root.examples, id: \.word) { example in
-        ExampleCardView(example: example)
       }
     }
   }
