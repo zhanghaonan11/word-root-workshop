@@ -78,7 +78,15 @@ private struct MorphChip: View {
 
 struct ExampleCardView: View {
   let example: WordExample
-  @StateObject private var pronunciationService = PronunciationService()
+  @EnvironmentObject private var pronunciationService: PronunciationService
+
+  private var normalizedPhonetic: String? {
+    guard let phonetic = example.phonetic?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !phonetic.isEmpty else {
+      return nil
+    }
+    return phonetic
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -97,12 +105,10 @@ struct ExampleCardView: View {
           .foregroundStyle(.blue)
           .accessibilityLabel("发音")
           .accessibilityHint("朗读单词发音")
-        }
 
-        if let phonetic = example.phonetic, !phonetic.isEmpty {
-          Text(phonetic)
+          Text(normalizedPhonetic ?? "（暂无音标）")
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(normalizedPhonetic == nil ? .tertiary : .secondary)
         }
       }
 

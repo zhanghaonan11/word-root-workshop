@@ -34,12 +34,16 @@ struct QuizSectionView: View {
       }
 
       if hasSubmitted {
-        if selectedAnswer == quiz.correctAnswer {
+        if !quiz.hasValidCorrectAnswer {
+          Text("题目数据异常，无法判题。")
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.orange)
+        } else if selectedAnswer == quiz.correctAnswer {
           Text("回答正确，已记录为掌握。")
             .font(.subheadline.weight(.medium))
             .foregroundStyle(.green)
         } else {
-          Text("回答错误，正确答案：\(quiz.options[quiz.correctAnswer])")
+          Text("回答错误，正确答案：\(correctOptionText)")
             .font(.subheadline.weight(.medium))
             .foregroundStyle(.red)
         }
@@ -51,7 +55,7 @@ struct QuizSectionView: View {
 
   @ViewBuilder
   private func feedbackIcon(for index: Int) -> some View {
-    if hasSubmitted {
+    if hasSubmitted, quiz.hasValidCorrectAnswer {
       if index == quiz.correctAnswer {
         Image(systemName: "checkmark.circle.fill")
           .foregroundStyle(.green)
@@ -67,7 +71,7 @@ struct QuizSectionView: View {
       return Color(.systemBackground)
     }
 
-    if index == quiz.correctAnswer {
+    if quiz.hasValidCorrectAnswer, index == quiz.correctAnswer {
       return Color.green.opacity(0.18)
     }
 
@@ -84,9 +88,14 @@ struct QuizSectionView: View {
     selectedAnswer = index
     hasSubmitted = true
 
-    if index == quiz.correctAnswer {
+    if quiz.hasValidCorrectAnswer, index == quiz.correctAnswer {
       onCorrect()
     }
+  }
+
+  private var correctOptionText: String {
+    guard quiz.hasValidCorrectAnswer else { return "（无）" }
+    return quiz.options[quiz.correctAnswer]
   }
 
   func resetState() {

@@ -74,4 +74,43 @@ struct WordQuiz: Codable, Hashable {
   let question: String
   let options: [String]
   let correctAnswer: Int
+
+  var hasValidCorrectAnswer: Bool {
+    options.indices.contains(correctAnswer)
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case question, options, correctAnswer
+  }
+
+  init(question: String, options: [String], correctAnswer: Int) {
+    self.question = question
+    self.options = options
+    self.correctAnswer = correctAnswer
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let question = try container.decode(String.self, forKey: .question)
+    let options = try container.decode([String].self, forKey: .options)
+    let correctAnswer = try container.decode(Int.self, forKey: .correctAnswer)
+
+    guard !options.isEmpty else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .options,
+        in: container,
+        debugDescription: "Quiz options must not be empty."
+      )
+    }
+
+    guard options.indices.contains(correctAnswer) else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .correctAnswer,
+        in: container,
+        debugDescription: "correctAnswer index is out of bounds."
+      )
+    }
+
+    self.init(question: question, options: options, correctAnswer: correctAnswer)
+  }
 }

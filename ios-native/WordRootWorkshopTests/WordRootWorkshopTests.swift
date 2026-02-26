@@ -41,6 +41,41 @@ final class WordRootWorkshopTests: XCTestCase {
     XCTAssertEqual(roots[0].examples.first?.word, "inspect")
   }
 
+  func testWordRootDecodingRejectsInvalidQuizAnswerIndex() throws {
+    let json = """
+    [
+      {
+        "id": 1,
+        "root": "spect",
+        "origin": "Latin",
+        "meaning": "看",
+        "meaningEn": "look",
+        "description": "spect 表示看",
+        "examples": [
+          {
+            "word": "inspect",
+            "breakdown": {
+              "prefix": "in",
+              "root": "spect",
+              "suffix": ""
+            },
+            "meaning": "检查",
+            "explanation": "向内看"
+          }
+        ],
+        "quiz": {
+          "question": "inspect 的意思是什么？",
+          "options": ["检查", "尊重"],
+          "correctAnswer": 9
+        }
+      }
+    ]
+    """
+
+    let data = try XCTUnwrap(json.data(using: .utf8))
+    XCTAssertThrowsError(try JSONDecoder().decode([WordRoot].self, from: data))
+  }
+
   @MainActor
   func testProgressStoreAvoidsDuplicateMastery() {
     let defaults = UserDefaults(suiteName: #function)!
@@ -150,4 +185,3 @@ final class WordRootWorkshopTests: XCTestCase {
     XCTAssertTrue(store.isMastered(rootID: 10))
   }
 }
-

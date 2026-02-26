@@ -35,32 +35,36 @@ final class WordRootRepository: ObservableObject {
   @Published private(set) var startupIssue: StartupIssue?
 
   private var rootsByID: [Int: WordRoot] = [:]
+  private var loadTask: Task<Void, Never>?
 
   init(bundle: Bundle = .main) {
     load(from: bundle)
   }
 
   func load(from bundle: Bundle = .main) {
-    do {
-      let loaded = try Self.loadRoots(from: bundle)
-      roots = loaded
-      rootsByID = Dictionary(uniqueKeysWithValues: loaded.map { ($0.id, $0) })
-      loadError = nil
-      startupIssue = nil
-    } catch {
-      roots = []
-      rootsByID = [:]
-      let resolvedError: RepositoryError
-      if let error = error as? RepositoryError {
-        resolvedError = error
-      } else {
-        resolvedError = .decodeFailed(
-          filePath: "unknown",
-          underlyingMessage: error.localizedDescription
-        )
+    loadTask?.cancel()
+    let bundlePath = bundle.bundlePath
+
+    loadTask = Task { [weak self] in
+      guard let self else { return }
+
+      do {
+        let loaded = try await Self.loadRootsInBackground(bundlePath: bundlePath)
+        guard !Task.isCancelled else { return }
+
+        roots = loaded
+        rootsByID = Dictionary(uniqueKeysWithValues: loaded.map { ($0.id, $0) })
+        loadError = nil
+        startupIssue = nil
+      } catch {
+        guard !Task.isCancelled else { return }
+
+        roots = []
+        rootsByID = [:]
+        let resolvedError = Self.resolveRepositoryError(from: error)
+        loadError = resolvedError.localizedDescription
+        startupIssue = Self.makeStartupIssue(from: resolvedError)
       }
-      loadError = resolvedError.localizedDescription
-      startupIssue = Self.makeStartupIssue(from: resolvedError)
     }
   }
 
@@ -68,7 +72,7 @@ final class WordRootRepository: ObservableObject {
     rootsByID[id]
   }
 
-  static func makeStartupIssue(from error: RepositoryError) -> StartupIssue {
+  nonisolated static func makeStartupIssue(from error: RepositoryError) -> StartupIssue {
     let baseSteps = [
       "确认项目里存在 ios-native/WordRootWorkshop/Resources/wordRoots.json",
       "执行：node ios-native/scripts/export_word_roots_json.js",
@@ -112,7 +116,7 @@ final class WordRootRepository: ObservableObject {
     }
   }
 
-  static func loadRoots(from bundle: Bundle) throws -> [WordRoot] {
+  nonisolated static func loadRoots(from bundle: Bundle) throws -> [WordRoot] {
     let resourceName = "wordRoots.json"
     guard let url = bundle.url(forResource: "wordRoots", withExtension: "json") else {
       throw RepositoryError.resourceMissing(
@@ -144,5 +148,34 @@ final class WordRootRepository: ObservableObject {
         underlyingMessage: error.localizedDescription
       )
     }
+  }
+
+  private nonisolated static func loadRootsInBackground(bundlePath: String) async throws -> [WordRoot] {
+    try await withCheckedThrowingContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        do {
+          guard let bundle = Bundle(path: bundlePath) else {
+            throw RepositoryError.resourceMissing(
+              resourceName: "wordRoots.json",
+              bundlePath: bundlePath
+            )
+          }
+          continuation.resume(returning: try loadRoots(from: bundle))
+        } catch {
+          continuation.resume(throwing: error)
+        }
+      }
+    }
+  }
+
+  private nonisolated static func resolveRepositoryError(from error: Error) -> RepositoryError {
+    if let error = error as? RepositoryError {
+      return error
+    }
+
+    return .decodeFailed(
+      filePath: "unknown",
+      underlyingMessage: error.localizedDescription
+    )
   }
 }

@@ -1,17 +1,33 @@
 import SwiftUI
 
+private enum RootTab: String, Hashable {
+  case learn
+  case flashcard
+  case library
+  case progress
+}
+
 struct RootTabView: View {
   @EnvironmentObject private var repository: WordRootRepository
+  @AppStorage("selectedRootTab") private var selectedTabRawValue: String = RootTab.learn.rawValue
   @State private var presentedStartupIssue: WordRootRepository.StartupIssue?
 
+  private var selectedTabBinding: Binding<RootTab> {
+    Binding(
+      get: { RootTab(rawValue: selectedTabRawValue) ?? .learn },
+      set: { selectedTabRawValue = $0.rawValue }
+    )
+  }
+
   var body: some View {
-    TabView {
+    TabView(selection: selectedTabBinding) {
       NavigationStack {
         LearnView()
       }
       .tabItem {
         Label("学习", systemImage: "book.fill")
       }
+      .tag(RootTab.learn)
 
       NavigationStack {
         FlashcardView()
@@ -19,13 +35,15 @@ struct RootTabView: View {
       .tabItem {
         Label("闪卡", systemImage: "rectangle.stack.fill")
       }
+      .tag(RootTab.flashcard)
 
       NavigationStack {
         RootsIndexView()
       }
       .tabItem {
-        Label("索引", systemImage: "list.bullet.rectangle")
+        Label("词根库", systemImage: "list.bullet.rectangle")
       }
+      .tag(RootTab.library)
 
       NavigationStack {
         ProgressDashboardView()
@@ -33,6 +51,7 @@ struct RootTabView: View {
       .tabItem {
         Label("进度", systemImage: "chart.bar.fill")
       }
+      .tag(RootTab.progress)
     }
     .onAppear {
       if let issue = repository.startupIssue {
@@ -43,13 +62,19 @@ struct RootTabView: View {
       presentedStartupIssue = issue
     }
     .sheet(item: $presentedStartupIssue) { issue in
-      StartupIssueSheet(issue: issue)
+      StartupIssueSheet(issue: issue) {
+        repository.load()
+      }
+      .presentationDetents([.medium, .large])
+      .presentationDragIndicator(.visible)
     }
   }
 }
 
 private struct StartupIssueSheet: View {
   let issue: WordRootRepository.StartupIssue
+  let onRetry: () -> Void
+
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {
@@ -78,6 +103,13 @@ private struct StartupIssueSheet: View {
       .navigationTitle(issue.title)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Button("重试加载") {
+            onRetry()
+            dismiss()
+          }
+        }
+
         ToolbarItem(placement: .topBarTrailing) {
           Button("关闭") {
             dismiss()

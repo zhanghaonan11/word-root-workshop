@@ -19,6 +19,8 @@ targets:
       - path: WordRootWorkshop/Views
       - path: WordRootWorkshop/Resources
         buildPhase: resources
+      - path: WordRootWorkshop/Assets.xcassets
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shan.wordrootworkshop

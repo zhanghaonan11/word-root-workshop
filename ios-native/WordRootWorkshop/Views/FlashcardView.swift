@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct FlashcardView: View {
   @EnvironmentObject private var repository: WordRootRepository
@@ -23,10 +26,14 @@ struct FlashcardView: View {
           withAnimation(.easeInOut(duration: 0.35)) {
             isFlipped.toggle()
           }
+          hapticLight()
         } label: {
           FlashcardContent(root: root, isFlipped: isFlipped)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("翻转卡片")
+        .accessibilityValue(isFlipped ? "当前为背面" : "当前为正面")
+        .accessibilityHint("双击可在正反面之间切换")
 
         HStack(spacing: 12) {
           Button {
@@ -36,6 +43,7 @@ struct FlashcardView: View {
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(.bordered)
+          .accessibilityHint("切换到上一张卡片")
 
           Button {
             markKnown()
@@ -44,8 +52,7 @@ struct FlashcardView: View {
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(.borderedProminent)
-          .tint(.yellow)
-          .foregroundStyle(.black)
+          .accessibilityHint("将当前词根标记为已掌握，并自动切换下一张")
 
           Button {
             nextCard()
@@ -54,6 +61,7 @@ struct FlashcardView: View {
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(.bordered)
+          .accessibilityHint("切换到下一张卡片")
         }
       } else if let loadError = repository.loadError {
         ContentUnavailableView("数据加载失败", systemImage: "exclamationmark.triangle", description: Text(loadError))
@@ -75,10 +83,16 @@ struct FlashcardView: View {
     HStack {
       Text("\(displayIndex)/\(max(roots.count, 1))")
         .font(.headline)
+        .accessibilityLabel("当前卡片位置")
+        .accessibilityValue("第 \(displayIndex) 张，共 \(max(roots.count, 1)) 张")
+
       Spacer()
+
       Text("已掌握: \(progressStore.masteredCount)")
         .font(.subheadline)
         .foregroundStyle(.secondary)
+        .accessibilityLabel("已掌握词根数")
+        .accessibilityValue("\(progressStore.masteredCount)")
     }
   }
 
@@ -110,13 +124,30 @@ struct FlashcardView: View {
   private func markKnown() {
     guard let root = currentRoot else { return }
     progressStore.markRootAsMastered(root.id)
+    hapticSuccess()
     nextCard()
+  }
+
+  private func hapticLight() {
+    #if canImport(UIKit)
+    let generator = UIImpactFeedbackGenerator(style: .light)
+    generator.impactOccurred()
+    #endif
+  }
+
+  private func hapticSuccess() {
+    #if canImport(UIKit)
+    let generator = UINotificationFeedbackGenerator()
+    generator.notificationOccurred(.success)
+    #endif
   }
 }
 
 private struct FlashcardContent: View {
   let root: WordRoot
   let isFlipped: Bool
+
+  @ScaledMetric(relativeTo: .largeTitle) private var rootFontSize: CGFloat = 44
 
   var body: some View {
     ZStack {
@@ -145,24 +176,37 @@ private struct FlashcardContent: View {
   private var front: some View {
     VStack(spacing: 10) {
       Text(root.root)
-        .font(.system(size: 44, weight: .bold, design: .rounded))
+        .font(.system(size: rootFontSize, weight: .bold, design: .rounded))
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+
       Text(root.meaning)
         .font(.title2.weight(.semibold))
+        .lineLimit(2)
+        .minimumScaleFactor(0.8)
+
       Text(root.origin)
         .font(.subheadline)
         .foregroundStyle(.secondary)
+
       Text("点击翻转")
         .font(.footnote)
         .foregroundStyle(.secondary)
         .padding(.top, 8)
     }
     .padding(20)
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("词根卡片正面")
+    .accessibilityValue("\(root.root)，含义 \(root.meaning)，来源 \(root.origin)")
   }
 
   private var back: some View {
     VStack(alignment: .leading, spacing: 10) {
       Text(root.root)
         .font(.title.weight(.bold))
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+
       Text(root.description)
         .font(.subheadline)
         .foregroundStyle(.secondary)
@@ -173,9 +217,14 @@ private struct FlashcardContent: View {
       ForEach(root.examples.prefix(3), id: \.word) { ex in
         Text("• \(ex.word)：\(ex.meaning)")
           .font(.footnote)
+          .lineLimit(2)
+          .minimumScaleFactor(0.85)
       }
     }
     .padding(18)
     .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("词根卡片背面")
+    .accessibilityValue("\(root.root) 的解释与例词")
   }
 }

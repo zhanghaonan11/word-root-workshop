@@ -1,11 +1,18 @@
 import SwiftUI
 
 struct RootsIndexView: View {
+  private struct SearchEntry {
+    let root: WordRoot
+    let category: WordRootCategory
+    let searchableText: String
+  }
+
   @EnvironmentObject private var repository: WordRootRepository
   @EnvironmentObject private var progressStore: ProgressStore
 
   @State private var query = ""
   @State private var selectedCategory: WordRootCategory = .all
+  @State private var indexedRoots: [SearchEntry] = []
   @State private var filteredRoots: [WordRoot] = []
 
   var body: some View {
@@ -44,36 +51,59 @@ struct RootsIndexView: View {
           .foregroundStyle(.secondary)
       }
     }
-    .onAppear(perform: refilter)
+    .onAppear {
+      rebuildSearchIndex()
+      refilter()
+    }
     .onChange(of: query) { _, _ in refilter() }
     .onChange(of: selectedCategory) { _, _ in refilter() }
-    .onChange(of: repository.roots.count) { _, _ in refilter() }
-  }
-
-  private func refilter() {
-    filteredRoots = repository.roots.filter { root in
-      matchesCategory(root) && matchesQuery(root)
+    .onChange(of: repository.roots) { _, _ in
+      rebuildSearchIndex()
+      refilter()
     }
   }
 
-  private func matchesCategory(_ root: WordRoot) -> Bool {
-    selectedCategory == .all || root.category == selectedCategory
+  private func refilter() {
+    let keyword = normalizedQuery
+
+    filteredRoots = indexedRoots.compactMap { entry in
+      guard selectedCategory == .all || entry.category == selectedCategory else {
+        return nil
+      }
+
+      guard keyword.isEmpty || entry.searchableText.contains(keyword) else {
+        return nil
+      }
+
+      return entry.root
+    }
   }
 
-  private func matchesQuery(_ root: WordRoot) -> Bool {
-    let keyword = query.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !keyword.isEmpty else { return true }
+  private func rebuildSearchIndex() {
+    indexedRoots = repository.roots.map { root in
+      SearchEntry(
+        root: root,
+        category: root.category,
+        searchableText: buildSearchableText(for: root)
+      )
+    }
+  }
 
-    let lower = keyword.lowercased()
-    return root.root.lowercased().contains(lower)
-      || root.origin.lowercased().contains(lower)
-      || root.meaning.lowercased().contains(lower)
-      || root.description.lowercased().contains(lower)
-      || root.examples.contains(where: { example in
-        example.word.lowercased().contains(lower)
-          || example.meaning.lowercased().contains(lower)
-          || example.explanation.lowercased().contains(lower)
-      })
+  private var normalizedQuery: String {
+    query
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+  }
+
+  private func buildSearchableText(for root: WordRoot) -> String {
+    let baseSegments = [root.root, root.origin, root.meaning, root.description]
+    let exampleSegments = root.examples.flatMap { example in
+      [example.word, example.meaning, example.explanation]
+    }
+
+    return (baseSegments + exampleSegments)
+      .joined(separator: " ")
+      .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
   }
 }
 
@@ -109,4 +139,3 @@ private struct RootRow: View {
     .padding(.vertical, 4)
   }
 }
-

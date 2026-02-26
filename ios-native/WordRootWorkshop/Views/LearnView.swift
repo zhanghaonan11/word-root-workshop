@@ -7,6 +7,7 @@ struct LearnView: View {
 
   @State private var currentIndex = 0
   @State private var quizID = UUID()
+  @ScaledMetric(relativeTo: .largeTitle) private var rootFontSize: CGFloat = LearnViewConstants.baseRootFontSize
 
   private var totalCount: Int {
     repository.roots.count
@@ -35,12 +36,14 @@ struct LearnView: View {
           }
           .id(quizID)
 
-          Button("下一个词根") {
+          Button {
             moveToNextRoot()
+          } label: {
+            Label("下一个词根", systemImage: "arrow.right.circle.fill")
+              .frame(maxWidth: .infinity)
           }
           .buttonStyle(.borderedProminent)
-          .tint(.yellow)
-          .foregroundStyle(.black)
+          .accessibilityHint("切换到下一个词根并刷新当前题目")
         } else {
           ProgressView("加载词根中...")
             .frame(maxWidth: .infinity, alignment: .center)
@@ -64,17 +67,26 @@ struct LearnView: View {
         Spacer()
         Text("\(safeDisplayIndex)/\(max(totalCount, 1))")
           .font(.subheadline.weight(.semibold))
+          .accessibilityLabel("学习进度")
+          .accessibilityValue("第 \(safeDisplayIndex) 个，共 \(max(totalCount, 1)) 个")
       }
 
       ProgressView(value: Double(safeDisplayIndex), total: Double(max(totalCount, 1)))
-        .tint(.yellow)
+        .accessibilityLabel("学习进度条")
+        .accessibilityValue("\(safeDisplayIndex) / \(max(totalCount, 1))")
 
       HStack {
         Label("已掌握 \(progressStore.masteredCount)", systemImage: "checkmark.seal.fill")
           .foregroundStyle(.secondary)
+          .accessibilityLabel("已掌握词根数")
+          .accessibilityValue("\(progressStore.masteredCount)")
+
         Spacer()
+
         Text("Lv.\(progressStore.progress.level)")
           .font(.subheadline.weight(.semibold))
+          .accessibilityLabel("当前等级")
+          .accessibilityValue("等级 \(progressStore.progress.level)")
       }
       .font(.subheadline)
     }
@@ -96,14 +108,19 @@ struct LearnView: View {
       } label: {
         HStack(spacing: 8) {
           Text(root.root)
-            .font(.system(size: LearnViewConstants.rootFontSize, weight: .bold, design: .rounded))
+            .font(.system(size: rootFontSize, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+
           Image(systemName: "speaker.wave.2.fill")
             .font(.title3.weight(.semibold))
             .foregroundStyle(.blue)
         }
       }
       .buttonStyle(.plain)
-      .accessibilityLabel("播放 \(root.root) 发音")
+      .accessibilityLabel("播放发音")
+      .accessibilityValue(root.root)
+      .accessibilityHint("双击播放词根发音")
 
       HStack(spacing: 8) {
         Text(root.origin)
@@ -114,6 +131,8 @@ struct LearnView: View {
 
         Text(root.meaning)
           .font(.title3.weight(.semibold))
+          .lineLimit(2)
+          .minimumScaleFactor(0.85)
       }
     }
   }
@@ -137,13 +156,7 @@ struct LearnView: View {
       Text("例词解析")
         .font(.headline)
       ForEach(root.examples, id: \.word) { example in
-        Button {
-          pronunciationService.speak(example.word)
-        } label: {
-          ExampleCardView(example: example)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("播放 \(example.word) 发音")
+        ExampleCardView(example: example)
       }
     }
   }
@@ -164,5 +177,5 @@ struct LearnView: View {
 }
 
 private enum LearnViewConstants {
-  static let rootFontSize: CGFloat = 44
+  static let baseRootFontSize: CGFloat = 44
 }
