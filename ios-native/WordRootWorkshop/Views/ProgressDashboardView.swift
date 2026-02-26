@@ -20,41 +20,27 @@ struct ProgressDashboardView: View {
     progressStore.masteredCount
   }
 
+  private var completionRatio: Double {
+    guard totalRoots > 0 else { return 0 }
+    return min(max(Double(masteredCount) / Double(totalRoots), 0), 1)
+  }
+
   private var percentage: Int {
-    Int((Double(masteredCount) / Double(totalRoots)) * 100)
+    Int(completionRatio * 100)
   }
 
   var body: some View {
     ScrollView {
-      VStack(spacing: 14) {
+      VStack(spacing: 16) {
+        heroProgressCard
         metricGrid
-
-        VStack(alignment: .leading, spacing: 10) {
-          HStack {
-            Text("整体进度")
-              .font(.headline)
-            Spacer()
-            Text("\(percentage)%")
-              .font(.headline)
-          }
-
-          ProgressView(value: Double(masteredCount), total: Double(totalRoots))
-            .tint(.yellow)
-
-          Text("距离下一级还需掌握 \(progressStore.rootsNeededForNextLevel) 个词根")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-        }
-        .padding(14)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
         actionButtons
-
         achievementsSection
       }
       .padding(16)
     }
     .navigationTitle("学习进度")
+    .background(Color(.systemGroupedBackground))
     .fileExporter(
       isPresented: $isExporting,
       document: exportDocument,
@@ -109,21 +95,90 @@ struct ProgressDashboardView: View {
     }
   }
 
+  private var heroProgressCard: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .center, spacing: 14) {
+        progressRing
+
+        VStack(alignment: .leading, spacing: 6) {
+          Text("整体进度")
+            .font(.headline)
+
+          Text("\(masteredCount)/\(repository.roots.count) 已掌握")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+          Text("距离下一级还需掌握 \(progressStore.rootsNeededForNextLevel) 个词根")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .lineLimit(2)
+            .minimumScaleFactor(0.9)
+        }
+
+        Spacer(minLength: 0)
+      }
+
+      ProgressView(value: Double(masteredCount), total: Double(totalRoots))
+        .tint(.yellow)
+    }
+    .padding(16)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(.thinMaterial)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .stroke(Color(.separator).opacity(0.20), lineWidth: 1)
+    )
+  }
+
+  private var progressRing: some View {
+    ZStack {
+      Circle()
+        .stroke(Color(.tertiarySystemFill), lineWidth: 10)
+
+      Circle()
+        .trim(from: 0, to: completionRatio)
+        .stroke(
+          AngularGradient(
+            gradient: Gradient(colors: [.yellow, .orange, .pink, .yellow]),
+            center: .center
+          ),
+          style: StrokeStyle(lineWidth: 10, lineCap: .round)
+        )
+        .rotationEffect(.degrees(-90))
+
+      VStack(spacing: 2) {
+        Text("\(percentage)%")
+          .font(.title3.weight(.bold))
+          .monospacedDigit()
+
+        Text("完成")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .frame(width: 84, height: 84)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("整体进度")
+    .accessibilityValue("\(percentage)%，已掌握 \(masteredCount)，总数 \(repository.roots.count)")
+  }
+
   private var metricGrid: some View {
-    VStack(spacing: 10) {
-      HStack(spacing: 10) {
-        metricCard(title: "已掌握", value: "\(masteredCount)/\(repository.roots.count)", icon: "book.closed.fill")
-        metricCard(title: "等级", value: "Lv.\(progressStore.progress.level)", icon: "star.fill")
+    Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+      GridRow {
+        metricCard(title: "已掌握", value: "\(masteredCount)", unit: "个", icon: "book.closed.fill", tint: .green)
+        metricCard(title: "等级", value: "\(progressStore.progress.level)", unit: "Lv", icon: "star.fill", tint: .yellow)
       }
 
-      HStack(spacing: 10) {
-        metricCard(title: "连续学习", value: "\(progressStore.progress.studyStreak) 天", icon: "flame.fill")
-        metricCard(title: "总积分", value: "\(progressStore.progress.totalScore)", icon: "bolt.fill")
+      GridRow {
+        metricCard(title: "连续学习", value: "\(progressStore.progress.studyStreak)", unit: "天", icon: "flame.fill", tint: .orange)
+        metricCard(title: "总积分", value: "\(progressStore.progress.totalScore)", unit: "分", icon: "bolt.fill", tint: .blue)
       }
 
-      HStack(spacing: 10) {
-        metricCard(title: "学习次数", value: "\(progressStore.progress.sessionCount)", icon: "number")
-        metricCard(title: "上次学习", value: lastStudyText(), icon: "calendar")
+      GridRow {
+        metricCard(title: "学习次数", value: "\(progressStore.progress.sessionCount)", unit: "次", icon: "number", tint: .purple)
+        metricCard(title: "上次学习", value: lastStudyText(), unit: nil, icon: "calendar", tint: .indigo)
       }
     }
   }
@@ -158,8 +213,11 @@ struct ProgressDashboardView: View {
 
   private var achievementsSection: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text("成就")
-        .font(.headline)
+      HStack {
+        Text("成就")
+          .font(.headline)
+        Spacer()
+      }
 
       if progressStore.achievements.isEmpty {
         Text("还没有解锁成就，继续学习就会点亮。")
@@ -167,44 +225,91 @@ struct ProgressDashboardView: View {
           .foregroundStyle(.secondary)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(14)
-          .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+              .fill(Color(.secondarySystemGroupedBackground))
+          )
       } else {
-        ForEach(progressStore.achievements.reversed()) { achievement in
+        ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 12) {
-            Text(achievement.icon)
-              .font(.system(size: 28))
-            VStack(alignment: .leading, spacing: 3) {
-              Text(achievement.title)
-                .font(.headline)
-              Text(achievement.description)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-              Text(achievement.unlockedAt.formatted(date: .numeric, time: .omitted))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            ForEach(progressStore.achievements.reversed()) { achievement in
+              achievementCard(achievement)
             }
-            Spacer()
           }
-          .padding(12)
-          .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .padding(.vertical, 2)
         }
       }
     }
   }
 
-  private func metricCard(title: String, value: String, icon: String) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Label(title, systemImage: icon)
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-      Text(value)
-        .font(.headline)
-        .lineLimit(1)
-        .minimumScaleFactor(0.8)
+  private func metricCard(
+    title: String,
+    value: String,
+    unit: String?,
+    icon: String,
+    tint: Color
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(spacing: 8) {
+        Image(systemName: icon)
+          .foregroundStyle(tint)
+        Text(title)
+          .foregroundStyle(.secondary)
+        Spacer()
+      }
+      .font(.subheadline)
+
+      HStack(alignment: .firstTextBaseline, spacing: 6) {
+        Text(value)
+          .font(.title3.weight(.bold))
+          .monospacedDigit()
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
+
+        if let unit {
+          Text(unit)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+        }
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(12)
-    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .padding(14)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(Color(.secondarySystemGroupedBackground))
+    )
+  }
+
+  private func achievementCard(_ achievement: Achievement) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 10) {
+        Text(achievement.icon)
+          .font(.system(size: 30))
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text(achievement.title)
+            .font(.headline)
+            .lineLimit(1)
+
+          Text(achievement.unlockedAt.formatted(date: .abbreviated, time: .omitted))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        Spacer(minLength: 0)
+      }
+
+      Text(achievement.description)
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .lineLimit(2)
+    }
+    .frame(width: 240, alignment: .leading)
+    .padding(14)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(Color(.secondarySystemGroupedBackground))
+    )
   }
 
   private func lastStudyText() -> String {
