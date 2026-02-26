@@ -78,12 +78,26 @@ private struct MorphChip: View {
 
 struct ExampleCardView: View {
   let example: WordExample
+  @StateObject private var pronunciationService = PronunciationService()
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       VStack(alignment: .leading, spacing: 4) {
-        Text(example.word)
-          .font(.title3.weight(.bold))
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+          Text(example.word)
+            .font(.title3.weight(.bold))
+
+          Button {
+            pronunciationService.speak(example.word)
+          } label: {
+            Image(systemName: "speaker.wave.2.fill")
+              .font(.subheadline.weight(.semibold))
+          }
+          .buttonStyle(.borderless)
+          .foregroundStyle(.blue)
+          .accessibilityLabel("发音")
+          .accessibilityHint("朗读单词发音")
+        }
 
         if let phonetic = example.phonetic, !phonetic.isEmpty {
           Text(phonetic)

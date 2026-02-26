@@ -12,6 +12,7 @@
 		497F8687716973DA9298FE60 /* ProgressDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459C73B076811203CE171F38 /* ProgressDashboardView.swift */; };
 		6DFEF95EAB79E81887B79A80 /* ProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2733F48397593BEDFCD3D3B0 /* ProgressModels.swift */; };
 		740E58122F4F430F00970DFC /* QuizSectionView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 740E58112F4F430F00970DFC /* QuizSectionView 2.swift */; };
+		742D54972F4FDE6700942E3F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 742D54962F4FDE6700942E3F /* Assets.xcassets */; };
 		85FEB8B894BFCC14E36D4127 /* WordRootRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0F1F9EDCF0E3E7B5D49768B /* WordRootRepository.swift */; };
 		8EF14930CA00000B6ED2D032 /* ProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A41335C6778E331DAD96F4 /* ProgressStore.swift */; };
 		9DDE0E68450D1AD90E08763F /* FlashcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8BAB12B08EF91AB87B049 /* FlashcardView.swift */; };
@@ -44,6 +45,7 @@
 		5CE8BAB12B08EF91AB87B049 /* FlashcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardView.swift; sourceTree = "<group>"; };
 		6799721DD6F07497C3742B8E /* LearnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnView.swift; sourceTree = "<group>"; };
 		740E58112F4F430F00970DFC /* QuizSectionView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QuizSectionView 2.swift"; sourceTree = "<group>"; };
+		742D54962F4FDE6700942E3F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9613ACB0E162C0D55D6A049E /* WordRootWorkshopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordRootWorkshopApp.swift; sourceTree = "<group>"; };
 		98B69C5FF311FB65AA2E942C /* wordRoots.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wordRoots.json; sourceTree = "<group>"; };
 		9A871087A643E1FB333EAABF /* WordRootWorkshopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordRootWorkshopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -89,6 +91,7 @@
 				3A9ED3FF8B99CAFD4A2A9E16 /* Resources */,
 				C3CC4A3C3AF691F83BA3BA00 /* Services */,
 				EA69E0C308E623024A414EC7 /* Views */,
+				742D54962F4FDE6700942E3F /* Assets.xcassets */,
 			);
 			path = WordRootWorkshop;
 			sourceTree = "<group>";
@@ -188,7 +191,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 2640;
 			};
 			buildConfigurationList = 09F5D526C1DB75D53BB1FB3E /* Build configuration list for PBXProject "WordRootWorkshop" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -214,6 +217,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				742D54972F4FDE6700942E3F /* Assets.xcassets in Resources */,
 				E23A90FED06E27B48A7A65B6 /* wordRoots.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -265,7 +269,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -410,7 +414,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -428,8 +432,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 9TZ939ZKK7;
 				INFOPLIST_FILE = WordRootWorkshop/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -446,8 +451,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 9TZ939ZKK7;
 				INFOPLIST_FILE = WordRootWorkshop/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
