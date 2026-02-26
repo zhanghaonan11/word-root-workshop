@@ -15,6 +15,7 @@ final class WordRootRepository: ObservableObject {
     case fileReadFailed(filePath: String, underlyingMessage: String)
     case emptyData(filePath: String)
     case decodeFailed(filePath: String, underlyingMessage: String)
+    case duplicateIDs(ids: [Int])
 
     var errorDescription: String? {
       switch self {
@@ -26,6 +27,8 @@ final class WordRootRepository: ObservableObject {
         return "启动自检失败：wordRoots.json 内容为空"
       case .decodeFailed:
         return "启动自检失败：wordRoots.json 解析失败"
+      case .duplicateIDs:
+        return "启动自检失败：wordRoots.json 存在重复 ID"
       }
     }
   }
@@ -51,6 +54,11 @@ final class WordRootRepository: ObservableObject {
       do {
         let loaded = try await Self.loadRootsInBackground(bundlePath: bundlePath)
         guard !Task.isCancelled else { return }
+
+        let duplicates = Self.findDuplicateIDs(in: loaded)
+        if !duplicates.isEmpty {
+          throw RepositoryError.duplicateIDs(ids: duplicates)
+        }
 
         roots = loaded
         rootsByID = Dictionary(uniqueKeysWithValues: loaded.map { ($0.id, $0) })
@@ -113,10 +121,21 @@ final class WordRootRepository: ObservableObject {
         steps: baseSteps,
         diagnostics: ["File path: \(filePath)", "Error: \(underlyingMessage)"]
       )
+    case let .duplicateIDs(ids):
+      return StartupIssue(
+        id: "startup_duplicate_ids",
+        title: "启动自检失败：词库存在重复 ID",
+        summary: "wordRoots.json 里存在重复的词根 ID，应用无法建立索引。",
+        steps: baseSteps,
+        diagnostics: ["Duplicate IDs: \(ids.map(String.init).joined(separator: ", "))"]
+      )
     }
   }
 
   nonisolated static func loadRoots(from bundle: Bundle) throws -> [WordRoot] {
+    // NOTE: Duplicate ID validation is handled in `load(...)` before building the ID map,
+    // so we can surface a friendly, recoverable startup error instead of trapping.
+
     let resourceName = "wordRoots.json"
     guard let url = bundle.url(forResource: "wordRoots", withExtension: "json") else {
       throw RepositoryError.resourceMissing(
@@ -177,5 +196,18 @@ final class WordRootRepository: ObservableObject {
       filePath: "unknown",
       underlyingMessage: error.localizedDescription
     )
+  }
+
+  private nonisolated static func findDuplicateIDs(in roots: [WordRoot]) -> [Int] {
+    var seen: Set<Int> = []
+    var duplicates: Set<Int> = []
+
+    for root in roots {
+      if !seen.insert(root.id).inserted {
+        duplicates.insert(root.id)
+      }
+    }
+
+    return duplicates.sorted()
   }
 }
