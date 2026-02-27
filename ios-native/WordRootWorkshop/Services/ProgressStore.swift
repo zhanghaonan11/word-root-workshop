@@ -184,6 +184,15 @@ final class ProgressStore: ObservableObject {
     saveAchievements()
   }
 
+  func importDataInBackground(_ data: Data) async throws {
+    let payload = try await Self.decodePayloadInBackground(data)
+    progress = payload.progress
+    achievements = payload.achievements
+    masteredRootIDs = Set(progress.masteredRoots)
+    saveProgress()
+    saveAchievements()
+  }
+
   private func unlockAchievement(id: String, type: String, title: String, description: String, icon: String) {
     guard !achievements.contains(where: { $0.id == id }) else {
       return
@@ -236,5 +245,14 @@ final class ProgressStore: ObservableObject {
     }
 
     return decoded
+  }
+
+  private nonisolated static func decodePayloadInBackground(_ data: Data) async throws -> BackupPayload {
+    try await Task.detached(priority: .userInitiated) {
+      let decoder = JSONDecoder()
+      decoder.dateDecodingStrategy = .iso8601
+      return try decoder.decode(BackupPayload.self, from: data)
+    }
+    .value
   }
 }
