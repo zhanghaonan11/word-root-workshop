@@ -52,12 +52,25 @@ struct WordRoot: Codable, Identifiable, Hashable {
   }
 }
 
-struct WordExample: Codable, Hashable {
+struct WordExample: Codable, Hashable, Identifiable {
   let word: String
   let phonetic: String?
   let breakdown: WordBreakdown
   let meaning: String
   let explanation: String
+
+  var id: String {
+    [
+      word,
+      phonetic ?? "",
+      breakdown.prefix,
+      breakdown.root,
+      breakdown.suffix,
+      meaning,
+      explanation
+    ]
+      .joined(separator: "|")
+  }
 
   private enum CodingKeys: String, CodingKey {
     case word, phonetic, breakdown, meaning, explanation
