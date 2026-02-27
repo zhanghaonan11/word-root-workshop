@@ -9,6 +9,7 @@ struct FlashcardView: View {
 
   @State private var currentIndex = 0
   @State private var isFlipped = false
+  @State private var dragOffset: CGFloat = 0
 
   private var roots: [WordRoot] { repository.roots }
 
@@ -27,13 +28,22 @@ struct FlashcardView: View {
     return roots[safeIndex]
   }
 
+  private var canNavigate: Bool {
+    roots.count > 1
+  }
+
+  private var isCurrentRootMastered: Bool {
+    guard let currentRoot else { return false }
+    return progressStore.isMastered(rootID: currentRoot.id)
+  }
+
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: DesignSystem.Spacing.section) {
       if let root = currentRoot {
         headerCard
 
         Button {
-          withAnimation(.easeInOut(duration: 0.35)) {
+          withAnimation(DesignSystem.Motion.standard) {
             isFlipped.toggle()
           }
           hapticLight()
@@ -44,6 +54,14 @@ struct FlashcardView: View {
         .accessibilityLabel("翻转卡片")
         .accessibilityValue(isFlipped ? "当前为背面" : "当前为正面")
         .accessibilityHint("双击可在正反面之间切换")
+        .offset(x: dragOffset)
+        .rotationEffect(.degrees(Double(dragOffset / 30)))
+        .animation(DesignSystem.Motion.spring, value: dragOffset)
+        .simultaneousGesture(
+          DragGesture(minimumDistance: 16)
+            .onChanged(handleCardDragChanged)
+            .onEnded(handleCardDragEnded)
+        )
 
         controlButtons
       } else if let loadError = repository.loadError {
@@ -54,9 +72,9 @@ struct FlashcardView: View {
         Spacer()
       }
     }
-    .padding(16)
+    .padding(DesignSystem.Spacing.page)
     .navigationTitle("闪卡")
-    .background(Color(.systemGroupedBackground))
+    .screenBackground()
     .onAppear(perform: syncCurrentIndex)
     .onChange(of: repository.roots.count) { _, _ in
       syncCurrentIndex()
@@ -64,20 +82,22 @@ struct FlashcardView: View {
   }
 
   private var headerCard: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.compact) {
       HStack {
         Text("\(displayIndex)/\(max(roots.count, 1))")
           .font(.headline)
+          .contentTransition(.numericText(value: Double(displayIndex)))
           .monospacedDigit()
           .accessibilityLabel("当前卡片位置")
           .accessibilityValue("第 \(displayIndex) 张，共 \(max(roots.count, 1)) 张")
 
         Spacer()
 
-        HStack(spacing: 6) {
+        HStack(spacing: DesignSystem.Spacing.xSmall) {
           Image(systemName: "checkmark.seal.fill")
             .foregroundStyle(.green)
           Text("已掌握 \(progressStore.masteredCount)")
+            .contentTransition(.numericText(value: Double(progressStore.masteredCount)))
             .foregroundStyle(.secondary)
         }
         .font(.subheadline.weight(.semibold))
@@ -85,20 +105,13 @@ struct FlashcardView: View {
 
       ProgressView(value: Double(displayIndex), total: Double(max(roots.count, 1)))
         .tint(.yellow)
+        .animation(DesignSystem.Motion.standard, value: displayIndex)
     }
-    .padding(16)
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(.thinMaterial)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(Color(.separator).opacity(0.20), lineWidth: 1)
-    )
+    .heroCardBackground()
   }
 
   private var controlButtons: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: DesignSystem.Spacing.item) {
       Button {
         prevCard()
       } label: {
@@ -106,15 +119,19 @@ struct FlashcardView: View {
           .frame(maxWidth: .infinity)
       }
       .buttonStyle(.bordered)
+      .controlSize(.large)
+      .disabled(!canNavigate)
       .accessibilityHint("切换到上一张卡片")
 
       Button {
         markKnown()
       } label: {
-        Label("已掌握", systemImage: "checkmark")
+        Label(isCurrentRootMastered ? "已掌握" : "标记掌握", systemImage: isCurrentRootMastered ? "checkmark.circle.fill" : "checkmark")
           .frame(maxWidth: .infinity)
       }
       .buttonStyle(.borderedProminent)
+      .controlSize(.large)
+      .disabled(isCurrentRootMastered)
       .accessibilityHint("将当前词根标记为已掌握，并自动切换下一张")
 
       Button {
@@ -124,35 +141,71 @@ struct FlashcardView: View {
           .frame(maxWidth: .infinity)
       }
       .buttonStyle(.bordered)
+      .controlSize(.large)
+      .disabled(!canNavigate)
       .accessibilityHint("切换到下一张卡片")
     }
+    .animation(DesignSystem.Motion.standard, value: isCurrentRootMastered)
   }
 
   private func syncCurrentIndex() {
     guard !roots.isEmpty else { return }
     currentIndex = min(max(progressStore.progress.currentRootIndex, 0), roots.count - 1)
     isFlipped = false
+    dragOffset = 0
   }
 
   private func nextCard() {
     guard !roots.isEmpty else { return }
-    currentIndex = (safeIndex + 1) % roots.count
+    withAnimation(DesignSystem.Motion.spring) {
+      currentIndex = (safeIndex + 1) % roots.count
+    }
     progressStore.setCurrentRootIndex(currentIndex)
     isFlipped = false
+    dragOffset = 0
   }
 
   private func prevCard() {
     guard !roots.isEmpty else { return }
-    currentIndex = (safeIndex - 1 + roots.count) % roots.count
+    withAnimation(DesignSystem.Motion.spring) {
+      currentIndex = (safeIndex - 1 + roots.count) % roots.count
+    }
     progressStore.setCurrentRootIndex(currentIndex)
     isFlipped = false
+    dragOffset = 0
   }
 
   private func markKnown() {
     guard let root = currentRoot else { return }
+    guard !progressStore.isMastered(rootID: root.id) else { return }
     progressStore.markRootAsMastered(root.id)
     hapticSuccess()
     nextCard()
+  }
+
+  private func handleCardDragChanged(_ value: DragGesture.Value) {
+    guard canNavigate else { return }
+    dragOffset = value.translation.width
+  }
+
+  private func handleCardDragEnded(_ value: DragGesture.Value) {
+    guard canNavigate else {
+      dragOffset = 0
+      return
+    }
+
+    let threshold: CGFloat = 80
+    if value.translation.width < -threshold {
+      nextCard()
+      hapticLight()
+    } else if value.translation.width > threshold {
+      prevCard()
+      hapticLight()
+    } else {
+      withAnimation(DesignSystem.Motion.spring) {
+        dragOffset = 0
+      }
+    }
   }
 
   private func hapticLight() {
@@ -241,7 +294,7 @@ private struct FlashcardContent: View {
 
       Divider()
 
-      ForEach(Array(root.examples.prefix(3).enumerated()), id: \.offset) { _, ex in
+      ForEach(Array(root.examples.prefix(3))) { ex in
         Text("• \(ex.word)：\(ex.meaning)")
           .font(.footnote)
           .lineLimit(2)
