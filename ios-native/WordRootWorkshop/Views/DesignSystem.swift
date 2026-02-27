@@ -14,6 +14,7 @@ enum DesignSystem {
 
   enum Radius {
     static let control: CGFloat = 12
+    static let chip: CGFloat = 10
     static let card: CGFloat = 18
     static let hero: CGFloat = 22
   }
@@ -21,6 +22,10 @@ enum DesignSystem {
   enum Motion {
     static let standard: Animation = .easeInOut(duration: 0.22)
     static let spring: Animation = .spring(response: 0.36, dampingFraction: 0.84, blendDuration: 0.1)
+  }
+
+  enum Theme {
+    static let accent: Color = .yellow
   }
 }
 
@@ -100,6 +105,6 @@ extension View {
   }
 
   func appTheming() -> some View {
-    self.tint(.yellow)
+    self.tint(DesignSystem.Theme.accent)
   }
 }

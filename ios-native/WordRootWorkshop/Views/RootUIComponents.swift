@@ -75,7 +75,7 @@ struct ExampleCardView: View {
   let example: WordExample
   @EnvironmentObject private var pronunciationService: PronunciationService
 
-  @State private var isExpanded = false
+  @State private var isExpanded = true
 
   private var normalizedPhonetic: String? {
     guard let phonetic = example.phonetic?.trimmingCharacters(in: .whitespacesAndNewlines),

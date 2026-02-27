@@ -43,8 +43,8 @@ struct LearnView: View {
             .frame(maxWidth: .infinity)
         } else if let root = currentRoot {
           rootCard(root)
-          quizCard(root)
           examplesCard(root)
+          quizCard(root)
 
           Button {
             moveToNextRoot()

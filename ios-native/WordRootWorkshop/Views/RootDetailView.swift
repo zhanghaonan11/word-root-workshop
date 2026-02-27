@@ -16,8 +16,8 @@ struct RootDetailView: View {
       if let root {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.section) {
           headerCard(root)
-          quizCard(root)
           examplesCard(root)
+          quizCard(root)
         }
         .padding(DesignSystem.Spacing.page)
       } else {
