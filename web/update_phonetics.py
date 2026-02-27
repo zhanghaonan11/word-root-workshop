@@ -1,9 +1,10 @@
 import re
 import eng_to_ipa as ipa
+from pathlib import Path
 
-FILE_PATH = 'ios-native/data/wordData.js'
+FILE_PATH = Path(__file__).resolve().parents[1] / 'ios' / 'data' / 'wordData.js'
 
-with open(FILE_PATH, 'r') as f:
+with open(FILE_PATH, 'r', encoding='utf-8') as f:
     content = f.read()
 
 # First we need to undo the previous incorrect insertion which put phonetic inside breakdown
@@ -26,7 +27,7 @@ def process_example(match):
 
 new_content = re.sub(r'\{\s*word:\s*\'[^\']+\'.*?\}', process_example, content, flags=re.DOTALL)
 
-with open(FILE_PATH, 'w') as f:
+with open(FILE_PATH, 'w', encoding='utf-8') as f:
     f.write(new_content)
 
 print(f"Finished processing {FILE_PATH}")

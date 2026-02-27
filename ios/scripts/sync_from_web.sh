@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 IOS_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd -- "${IOS_ROOT}/.." && pwd)"
 
-WEB_DATA_PATH="${REPO_ROOT}/js/wordData.js"
+WEB_DATA_PATH="${REPO_ROOT}/web/js/wordData.js"
 IOS_DATA_PATH="${IOS_ROOT}/data/wordData.js"
 EXPORT_SCRIPT_PATH="${SCRIPT_DIR}/export_word_roots_json.js"
 

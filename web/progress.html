@@ -129,6 +129,41 @@
               清除所有数据
             </button>
           </div>
+
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 10px;">
+            <div style="font-size: 0.9375rem; font-weight: 600;">云端同步（轻量）</div>
+            <div id="syncStatusText" style="font-size: 0.8125rem; color: var(--color-text-secondary);">
+              未启用
+            </div>
+            <input
+              type="text"
+              id="syncCodeInput"
+              placeholder="输入同步码（例如 WR-ABCD1234）"
+              style="width: 100%; border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px; font-size: 0.875rem; font-family: monospace;"
+            />
+            <div style="display: flex; gap: 8px;">
+              <button onclick="saveSyncCode()" class="btn" style="flex: 1;">
+                保存同步码
+              </button>
+              <button onclick="generateSyncCode()" class="btn" style="flex: 1;">
+                生成新码
+              </button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="cloudSmartSyncBtn" onclick="runCloudSync('smart')" class="btn btn-primary" style="flex: 2;">
+                智能同步
+              </button>
+              <button id="cloudPullBtn" onclick="runCloudSync('pull')" class="btn" style="flex: 1;">
+                下载
+              </button>
+              <button id="cloudPushBtn" onclick="runCloudSync('push')" class="btn" style="flex: 1;">
+                上传
+              </button>
+            </div>
+            <button onclick="clearSyncCode()" class="btn" style="width: 100%; color: #DC2626; border-color: #FEE2E2;">
+              关闭云同步
+            </button>
+          </div>
         </div>
       </div>
 
@@ -141,6 +176,7 @@
     // 进度页面逻辑
     document.addEventListener('DOMContentLoaded', () => {
       loadProgress();
+      loadSyncPanel();
     });
 
     function loadProgress() {
@@ -221,14 +257,7 @@
     }
 
     function exportProgress() {
-      const progress = StorageManager.getProgress();
-      const achievements = StorageManager.getAchievements();
-
-      const data = {
-        progress,
-        achievements,
-        exportDate: new Date().toISOString()
-      };
+      const data = StorageManager.exportData();
 
       const dataStr = JSON.stringify(data, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -256,14 +285,7 @@
         reader.onload = (event) => {
           try {
             const data = JSON.parse(event.target.result);
-
-            if (data.progress) {
-              StorageManager.saveProgress(data.progress);
-            }
-
-            if (data.achievements) {
-              localStorage.setItem('wordRootAchievements', JSON.stringify(data.achievements));
-            }
+            StorageManager.importData(data);
 
             alert('学习数据已导入！');
             location.reload();
@@ -282,11 +304,133 @@
     function confirmClearData() {
       if (confirm('确定要清除所有学习数据吗？此操作不可恢复！')) {
         if (confirm('真的确定吗？这将清除您的所有学习进度和成就！')) {
-          localStorage.removeItem('wordRootProgress');
-          localStorage.removeItem('wordRootAchievements');
-          alert('所有数据已清除');
-          location.reload();
+          StorageManager.clearAll({ confirm: false });
         }
+      }
+    }
+
+    function formatTime(value) {
+      if (!value) return '未同步';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '未同步';
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+
+    function setSyncStatus(text) {
+      const statusElement = document.getElementById('syncStatusText');
+      if (!statusElement) return;
+      statusElement.textContent = text;
+    }
+
+    function loadSyncPanel() {
+      const input = document.getElementById('syncCodeInput');
+      const config = StorageManager.getSyncConfig();
+      if (input) {
+        input.value = config.syncCode || '';
+      }
+      refreshSyncStatus();
+      updateSyncButtonAvailability();
+    }
+
+    function refreshSyncStatus(message = '') {
+      const config = StorageManager.getSyncConfig();
+      const meta = StorageManager.getMeta();
+
+      if (!config.syncCode) {
+        setSyncStatus('未启用云同步（本地离线模式）');
+        return;
+      }
+
+      const baseStatus = `同步码：${config.syncCode} · 上次同步：${formatTime(meta.lastSyncedAt)}`;
+      setSyncStatus(message ? `${message} · ${baseStatus}` : baseStatus);
+    }
+
+    function saveSyncCode() {
+      const input = document.getElementById('syncCodeInput');
+      if (!input) return;
+
+      try {
+        const code = StorageManager.setSyncCode(input.value);
+        input.value = code;
+        refreshSyncStatus('同步码已保存');
+        updateSyncButtonAvailability();
+      } catch (error) {
+        alert(error.message || '同步码无效');
+      }
+    }
+
+    function generateSyncCode() {
+      const code = CloudSyncManager.generateSyncCode();
+      const input = document.getElementById('syncCodeInput');
+      if (input) {
+        input.value = code;
+      }
+      saveSyncCode();
+    }
+
+    function clearSyncCode() {
+      if (!confirm('关闭后将停止云同步，但本地数据会保留。确定继续吗？')) {
+        return;
+      }
+      StorageManager.clearSyncCode();
+      const input = document.getElementById('syncCodeInput');
+      if (input) {
+        input.value = '';
+      }
+      refreshSyncStatus('云同步已关闭');
+      updateSyncButtonAvailability();
+    }
+
+    function setSyncButtonsDisabled(disabled) {
+      ['cloudSmartSyncBtn', 'cloudPullBtn', 'cloudPushBtn'].forEach((id) => {
+        const button = document.getElementById(id);
+        if (button) {
+          button.disabled = disabled;
+          button.style.opacity = disabled ? '0.6' : '1';
+          button.style.cursor = disabled ? 'not-allowed' : 'pointer';
+        }
+      });
+    }
+
+    function updateSyncButtonAvailability() {
+      const hasSyncCode = Boolean(StorageManager.getSyncConfig().syncCode);
+      setSyncButtonsDisabled(!hasSyncCode);
+    }
+
+    function syncResultText(mode, result) {
+      if (!result || result.action === 'none') return '云端暂无数据';
+      if (mode === 'push') return '上传完成';
+      if (mode === 'pull') return '下载完成';
+      if (result.action === 'pull') return '智能同步完成（已拉取云端）';
+      return '智能同步完成（已上传本地）';
+    }
+
+    async function runCloudSync(mode = 'smart') {
+      const config = StorageManager.getSyncConfig();
+      if (!config.syncCode) {
+        alert('请先输入并保存同步码');
+        return;
+      }
+
+      const actionText = mode === 'push'
+        ? '正在上传...'
+        : mode === 'pull'
+          ? '正在下载...'
+          : '正在智能同步...';
+
+      setSyncButtonsDisabled(true);
+      refreshSyncStatus(actionText);
+
+      try {
+        const result = await CloudSyncManager.syncNow(mode, { silent: true });
+        if (result.action === 'pull') {
+          loadProgress();
+        }
+        refreshSyncStatus(syncResultText(mode, result));
+      } catch (error) {
+        refreshSyncStatus(`同步失败：${error.message}`);
+      } finally {
+        setSyncButtonsDisabled(false);
       }
     }
   </script>

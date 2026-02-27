@@ -82,9 +82,9 @@ final class WordRootRepository: ObservableObject {
 
   nonisolated static func makeStartupIssue(from error: RepositoryError) -> StartupIssue {
     let baseSteps = [
-      "确认项目里存在 ios-native/WordRootWorkshop/Resources/wordRoots.json",
-      "执行：node ios-native/scripts/export_word_roots_json.js",
-      "执行：xcodegen generate --spec ios-native/project.yml",
+      "确认项目里存在 ios/WordRootWorkshop/Resources/wordRoots.json",
+      "执行：node ios/scripts/export_word_roots_json.js",
+      "执行：xcodegen generate --spec ios/project.yml",
       "Xcode 里执行 Product > Clean Build Folder，并删除旧 App 后重装"
     ]
 
