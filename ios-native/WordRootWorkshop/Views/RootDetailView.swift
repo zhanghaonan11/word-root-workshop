@@ -14,12 +14,12 @@ struct RootDetailView: View {
   var body: some View {
     ScrollView {
       if let root {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.section) {
           headerCard(root)
           quizCard(root)
           examplesCard(root)
         }
-        .padding(16)
+        .padding(DesignSystem.Spacing.page)
       } else {
         ContentUnavailableView("词根不存在", systemImage: "questionmark.circle")
           .padding(.top, 50)
@@ -27,16 +27,16 @@ struct RootDetailView: View {
     }
     .navigationTitle(root?.root ?? "词根详情")
     .navigationBarTitleDisplayMode(.inline)
-    .background(Color(.systemGroupedBackground))
+    .screenBackground()
   }
 
   private func headerCard(_ root: WordRoot) -> some View {
-    VStack(alignment: .leading, spacing: 14) {
-      HStack(alignment: .firstTextBaseline, spacing: 10) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.regular) {
+      HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.compact) {
         Button {
           pronunciationService.speak(root.root)
         } label: {
-          HStack(spacing: 10) {
+          HStack(spacing: DesignSystem.Spacing.compact) {
             Text(root.root)
               .font(.system(size: 38, weight: .bold, design: .rounded))
               .lineLimit(1)
@@ -54,14 +54,14 @@ struct RootDetailView: View {
         Spacer(minLength: 0)
 
         if progressStore.isMastered(rootID: root.id) {
-          HStack(spacing: 6) {
+          HStack(spacing: DesignSystem.Spacing.xSmall) {
             Image(systemName: "checkmark.seal.fill")
             Text("已掌握")
           }
           .font(.caption.weight(.semibold))
           .foregroundStyle(.green)
-          .padding(.horizontal, 10)
-          .padding(.vertical, 6)
+          .padding(.horizontal, DesignSystem.Spacing.compact)
+          .padding(.vertical, DesignSystem.Spacing.xSmall)
           .background(
             Capsule(style: .continuous)
               .fill(Color.green.opacity(0.12))
@@ -69,11 +69,11 @@ struct RootDetailView: View {
         }
       }
 
-      HStack(spacing: 8) {
+      HStack(spacing: DesignSystem.Spacing.tight) {
         Text(root.origin)
           .font(.footnote.weight(.semibold))
-          .padding(.horizontal, 10)
-          .padding(.vertical, 4)
+          .padding(.horizontal, DesignSystem.Spacing.compact)
+          .padding(.vertical, DesignSystem.Spacing.xxSmall)
           .background(Color.blue.opacity(0.14), in: Capsule(style: .continuous))
 
         Text(root.meaning)
@@ -82,32 +82,28 @@ struct RootDetailView: View {
           .minimumScaleFactor(0.85)
       }
 
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: DesignSystem.Spacing.tight) {
         Text("详细说明")
           .font(.headline)
         Text(root.description)
           .foregroundStyle(.secondary)
       }
     }
-    .padding(16)
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(Color(.secondarySystemGroupedBackground))
-    )
+    .cardBackground()
   }
 
   private func quizCard(_ root: WordRoot) -> some View {
-    QuizSectionView(quiz: root.quiz, rootID: root.id) {
+    QuizSectionView(quiz: root.quiz) {
       progressStore.markRootAsMastered(root.id)
     }
   }
 
   private func examplesCard(_ root: WordRoot) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
       Text("例词解析")
         .font(.headline)
 
-      ForEach(Array(root.examples.enumerated()), id: \.offset) { _, example in
+      ForEach(root.examples) { example in
         ExampleCardView(example: example)
       }
     }

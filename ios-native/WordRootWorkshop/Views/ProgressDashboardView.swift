@@ -7,6 +7,7 @@ struct ProgressDashboardView: View {
 
   @State private var isExporting = false
   @State private var isImporting = false
+  @State private var isImportingData = false
   @State private var exportDocument = ProgressBackupDocument(data: Data())
   @State private var alertMessage: String?
   @State private var showingAlert = false
@@ -31,16 +32,16 @@ struct ProgressDashboardView: View {
 
   var body: some View {
     ScrollView {
-      VStack(spacing: 16) {
+      VStack(spacing: DesignSystem.Spacing.section) {
         heroProgressCard
         metricGrid
         actionButtons
         achievementsSection
       }
-      .padding(16)
+      .padding(DesignSystem.Spacing.page)
     }
     .navigationTitle("学习进度")
-    .background(Color(.systemGroupedBackground))
+    .screenBackground()
     .fileExporter(
       isPresented: $isExporting,
       document: exportDocument,
@@ -62,20 +63,7 @@ struct ProgressDashboardView: View {
       switch result {
       case .success(let urls):
         guard let url = urls.first else { return }
-        do {
-          let shouldStop = url.startAccessingSecurityScopedResource()
-          defer {
-            if shouldStop {
-              url.stopAccessingSecurityScopedResource()
-            }
-          }
-
-          let data = try Data(contentsOf: url)
-          try progressStore.importData(data)
-          showAlert("学习数据已导入。")
-        } catch {
-          showAlert("导入失败：\(error.localizedDescription)")
-        }
+        importData(from: url)
       case .failure(let error):
         showAlert("导入失败：\(error.localizedDescription)")
       }
@@ -96,11 +84,11 @@ struct ProgressDashboardView: View {
   }
 
   private var heroProgressCard: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack(alignment: .center, spacing: 14) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
+      HStack(alignment: .center, spacing: DesignSystem.Spacing.regular) {
         progressRing
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
           Text("整体进度")
             .font(.headline)
 
@@ -121,15 +109,7 @@ struct ProgressDashboardView: View {
       ProgressView(value: Double(masteredCount), total: Double(totalRoots))
         .tint(.yellow)
     }
-    .padding(16)
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(.thinMaterial)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(Color(.separator).opacity(0.20), lineWidth: 1)
-    )
+    .heroCardBackground()
   }
 
   private var progressRing: some View {
@@ -165,7 +145,7 @@ struct ProgressDashboardView: View {
   }
 
   private var metricGrid: some View {
-    Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+    Grid(horizontalSpacing: DesignSystem.Spacing.compact, verticalSpacing: DesignSystem.Spacing.compact) {
       GridRow {
         metricCard(title: "已掌握", value: "\(masteredCount)", unit: "个", icon: "book.closed.fill", tint: .green)
         metricCard(title: "等级", value: "\(progressStore.progress.level)", unit: "Lv", icon: "star.fill", tint: .yellow)
@@ -184,35 +164,53 @@ struct ProgressDashboardView: View {
   }
 
   private var actionButtons: some View {
-    HStack(spacing: 10) {
-      Button {
-        exportData()
-      } label: {
-        Label("导出", systemImage: "square.and.arrow.up")
-          .frame(maxWidth: .infinity)
-      }
-      .buttonStyle(.bordered)
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.tight) {
+      HStack(spacing: DesignSystem.Spacing.compact) {
+        Button {
+          exportData()
+        } label: {
+          Label("导出", systemImage: "square.and.arrow.up")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .disabled(isImportingData)
+        .accessibilityHint("将当前学习记录导出为 JSON 文件")
 
-      Button {
-        isImporting = true
-      } label: {
-        Label("导入", systemImage: "square.and.arrow.down")
-          .frame(maxWidth: .infinity)
-      }
-      .buttonStyle(.bordered)
+        Button {
+          isImporting = true
+        } label: {
+          Label("导入", systemImage: "square.and.arrow.down")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .disabled(isImportingData)
+        .accessibilityHint("从 JSON 文件恢复学习记录")
 
-      Button(role: .destructive) {
-        showingResetDialog = true
-      } label: {
-        Label("重置", systemImage: "trash")
-          .frame(maxWidth: .infinity)
+        Button(role: .destructive) {
+          showingResetDialog = true
+        } label: {
+          Label("重置", systemImage: "trash")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .disabled(isImportingData)
+        .accessibilityHint("清除全部学习数据")
       }
-      .buttonStyle(.bordered)
+
+      if isImportingData {
+        HStack(spacing: DesignSystem.Spacing.tight) {
+          ProgressView()
+          Text("正在导入学习数据…")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+        .transition(.opacity)
+      }
     }
   }
 
   private var achievementsSection: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.compact) {
       HStack {
         Text("成就")
           .font(.headline)
@@ -224,14 +222,14 @@ struct ProgressDashboardView: View {
           .font(.subheadline)
           .foregroundStyle(.secondary)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(14)
+          .padding(DesignSystem.Spacing.regular)
           .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: DesignSystem.Radius.card, style: .continuous)
               .fill(Color(.secondarySystemGroupedBackground))
           )
       } else {
         ScrollView(.horizontal, showsIndicators: false) {
-          HStack(spacing: 12) {
+          HStack(spacing: DesignSystem.Spacing.item) {
             ForEach(progressStore.achievements.reversed()) { achievement in
               achievementCard(achievement)
             }
@@ -249,8 +247,8 @@ struct ProgressDashboardView: View {
     icon: String,
     tint: Color
   ) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack(spacing: 8) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.compact) {
+      HStack(spacing: DesignSystem.Spacing.tight) {
         Image(systemName: icon)
           .foregroundStyle(tint)
         Text(title)
@@ -259,7 +257,7 @@ struct ProgressDashboardView: View {
       }
       .font(.subheadline)
 
-      HStack(alignment: .firstTextBaseline, spacing: 6) {
+      HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.xSmall) {
         Text(value)
           .font(.title3.weight(.bold))
           .monospacedDigit()
@@ -274,16 +272,16 @@ struct ProgressDashboardView: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(14)
+    .padding(DesignSystem.Spacing.regular)
     .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
+      RoundedRectangle(cornerRadius: DesignSystem.Radius.card, style: .continuous)
         .fill(Color(.secondarySystemGroupedBackground))
     )
   }
 
   private func achievementCard(_ achievement: Achievement) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(spacing: 10) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.tight) {
+      HStack(spacing: DesignSystem.Spacing.compact) {
         Text(achievement.icon)
           .font(.system(size: 30))
 
@@ -305,9 +303,9 @@ struct ProgressDashboardView: View {
         .lineLimit(2)
     }
     .frame(width: 240, alignment: .leading)
-    .padding(14)
+    .padding(DesignSystem.Spacing.regular)
     .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
+      RoundedRectangle(cornerRadius: DesignSystem.Radius.card, style: .continuous)
         .fill(Color(.secondarySystemGroupedBackground))
     )
   }
@@ -334,6 +332,34 @@ struct ProgressDashboardView: View {
       isExporting = true
     } catch {
       showAlert("导出失败：\(error.localizedDescription)")
+    }
+  }
+
+  private func importData(from url: URL) {
+    Task { @MainActor in
+      isImportingData = true
+      defer {
+        isImportingData = false
+      }
+
+      do {
+        let shouldStop = url.startAccessingSecurityScopedResource()
+        defer {
+          if shouldStop {
+            url.stopAccessingSecurityScopedResource()
+          }
+        }
+
+        let data = try await Task.detached(priority: .userInitiated) {
+          try Data(contentsOf: url, options: [.mappedIfSafe])
+        }
+        .value
+
+        try await progressStore.importDataInBackground(data)
+        showAlert("学习数据已导入。")
+      } catch {
+        showAlert("导入失败：\(error.localizedDescription)")
+      }
     }
   }
 

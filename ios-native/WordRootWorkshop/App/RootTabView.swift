@@ -53,6 +53,8 @@ struct RootTabView: View {
       }
       .tag(RootTab.progress)
     }
+    .toolbarBackground(.visible, for: .tabBar)
+    .toolbarBackground(Color(.systemBackground), for: .tabBar)
     .onAppear {
       if let issue = repository.startupIssue {
         presentedStartupIssue = issue
@@ -67,6 +69,8 @@ struct RootTabView: View {
       }
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
+      .presentationBackground(.regularMaterial)
+      .presentationCornerRadius(22)
     }
   }
 }
@@ -100,18 +104,19 @@ private struct StartupIssueSheet: View {
           }
         }
       }
+      .listStyle(.insetGrouped)
       .navigationTitle(issue.title)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
-          Button("重试加载") {
-            onRetry()
+          Button("关闭") {
             dismiss()
           }
         }
 
         ToolbarItem(placement: .topBarTrailing) {
-          Button("关闭") {
+          Button("重试加载") {
+            onRetry()
             dismiss()
           }
         }

@@ -41,7 +41,7 @@ struct BreakdownChipsView: View {
   let breakdown: WordBreakdown
 
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: DesignSystem.Spacing.tight) {
       if !breakdown.prefix.isEmpty {
         MorphChip(text: breakdown.prefix, color: .red)
       }
@@ -64,10 +64,10 @@ private struct MorphChip: View {
   var body: some View {
     Text(text)
       .font(.system(.caption, design: .monospaced).weight(.semibold))
-      .padding(.horizontal, 10)
-      .padding(.vertical, 6)
+      .padding(.horizontal, DesignSystem.Spacing.compact)
+      .padding(.vertical, DesignSystem.Spacing.xSmall)
       .foregroundStyle(color)
-      .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: DesignSystem.Radius.chip, style: .continuous))
   }
 }
 
@@ -84,8 +84,8 @@ struct ExampleCardView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack(alignment: .firstTextBaseline, spacing: 10) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
+      HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.compact) {
         Text(example.word)
           .font(.title3.weight(.bold))
 
@@ -109,7 +109,7 @@ struct ExampleCardView: View {
 
       BreakdownChipsView(breakdown: example.breakdown)
 
-      VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
         Text(example.meaning)
           .font(.headline)
         Text(example.explanation)
@@ -117,10 +117,10 @@ struct ExampleCardView: View {
           .foregroundStyle(.secondary)
       }
     }
-    .padding(16)
+    .padding(DesignSystem.Spacing.section)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
+      RoundedRectangle(cornerRadius: DesignSystem.Radius.card, style: .continuous)
         .fill(Color(.secondarySystemGroupedBackground))
     )
   }

@@ -35,7 +35,7 @@ struct LearnView: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: DesignSystem.Spacing.section) {
         heroProgressCard
 
         if let loadError = repository.loadError {
@@ -60,10 +60,10 @@ struct LearnView: View {
             .padding(.top, 40)
         }
       }
-      .padding(16)
+      .padding(DesignSystem.Spacing.page)
     }
     .navigationTitle("学习")
-    .background(Color(.systemGroupedBackground))
+    .screenBackground()
     .onAppear(perform: syncCurrentIndex)
     .onChange(of: repository.roots.count) { _, _ in
       syncCurrentIndex()
@@ -71,11 +71,11 @@ struct LearnView: View {
   }
 
   private var heroProgressCard: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack(alignment: .center, spacing: 14) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
+      HStack(alignment: .center, spacing: DesignSystem.Spacing.regular) {
         progressRing
 
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.tight) {
           HStack {
             Text("学习进度")
               .font(.headline)
@@ -86,7 +86,7 @@ struct LearnView: View {
               .foregroundStyle(.secondary)
           }
 
-          HStack(spacing: 10) {
+          HStack(spacing: DesignSystem.Spacing.compact) {
             metricPill(icon: "checkmark.seal.fill", text: "已掌握 \(progressStore.masteredCount)", tint: .green)
             metricPill(icon: "star.fill", text: "Lv.\(progressStore.progress.level)", tint: .yellow)
             metricPill(icon: "flame.fill", text: "\(progressStore.progress.studyStreak) 天", tint: .orange)
@@ -102,15 +102,7 @@ struct LearnView: View {
         .accessibilityLabel("学习进度条")
         .accessibilityValue("\(safeDisplayIndex) / \(max(totalCount, 1))")
     }
-    .padding(16)
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(.thinMaterial)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(Color(.separator).opacity(0.20), lineWidth: 1)
-    )
+    .heroCardBackground()
   }
 
   private var progressRing: some View {
@@ -145,7 +137,7 @@ struct LearnView: View {
   }
 
   private func metricPill(icon: String, text: String, tint: Color) -> some View {
-    HStack(spacing: 6) {
+    HStack(spacing: DesignSystem.Spacing.xSmall) {
       Image(systemName: icon)
         .foregroundStyle(tint)
       Text(text)
@@ -153,8 +145,8 @@ struct LearnView: View {
         .lineLimit(1)
         .minimumScaleFactor(0.85)
     }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 6)
+    .padding(.horizontal, DesignSystem.Spacing.compact)
+    .padding(.vertical, DesignSystem.Spacing.xSmall)
     .background(
       Capsule(style: .continuous)
         .fill(Color(.secondarySystemGroupedBackground))
@@ -162,10 +154,10 @@ struct LearnView: View {
   }
 
   private func rootCard(_ root: WordRoot) -> some View {
-    VStack(alignment: .leading, spacing: 14) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.regular) {
       rootHeader(root)
 
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: DesignSystem.Spacing.tight) {
         Text("详细说明")
           .font(.headline)
         Text(root.description)
@@ -173,15 +165,11 @@ struct LearnView: View {
           .foregroundStyle(.secondary)
       }
     }
-    .padding(16)
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(Color(.secondarySystemGroupedBackground))
-    )
+    .cardBackground()
   }
 
   private func quizCard(_ root: WordRoot) -> some View {
-    QuizSectionView(quiz: root.quiz, rootID: root.id) {
+    QuizSectionView(quiz: root.quiz) {
       progressStore.markRootAsMastered(root.id)
     }
     .id(quizID)
@@ -189,14 +177,14 @@ struct LearnView: View {
   }
 
   private func examplesCard(_ root: WordRoot) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
       HStack {
         Text("例词解析")
           .font(.headline)
         Spacer()
       }
 
-      ForEach(Array(root.examples.enumerated()), id: \.offset) { _, example in
+      ForEach(root.examples) { example in
         ExampleCardView(example: example)
       }
     }
@@ -204,11 +192,11 @@ struct LearnView: View {
 
   @ViewBuilder
   private func rootHeader(_ root: WordRoot) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.compact) {
       Button {
         pronunciationService.speak(root.root)
       } label: {
-        HStack(spacing: 8) {
+        HStack(spacing: DesignSystem.Spacing.tight) {
           Text(root.root)
             .font(.system(size: rootFontSize, weight: .bold, design: .rounded))
             .lineLimit(1)
@@ -224,11 +212,11 @@ struct LearnView: View {
       .accessibilityValue(root.root)
       .accessibilityHint("双击播放词根发音")
 
-      HStack(spacing: 8) {
+      HStack(spacing: DesignSystem.Spacing.tight) {
         Text(root.origin)
           .font(.footnote.weight(.semibold))
-          .padding(.horizontal, 10)
-          .padding(.vertical, 4)
+          .padding(.horizontal, DesignSystem.Spacing.compact)
+          .padding(.vertical, DesignSystem.Spacing.xxSmall)
           .background(Color.blue.opacity(0.14), in: Capsule())
 
         Text(root.meaning)
