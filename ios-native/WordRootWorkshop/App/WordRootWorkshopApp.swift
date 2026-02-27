@@ -14,6 +14,7 @@ struct WordRootWorkshopApp: App {
         .environmentObject(repository)
         .environmentObject(progressStore)
         .environmentObject(pronunciationService)
+        .appTheming()
     }
     .onChange(of: scenePhase) { _, newPhase in
       if newPhase == .active {

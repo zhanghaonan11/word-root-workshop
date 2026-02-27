@@ -75,6 +75,8 @@ struct ExampleCardView: View {
   let example: WordExample
   @EnvironmentObject private var pronunciationService: PronunciationService
 
+  @State private var isExpanded = false
+
   private var normalizedPhonetic: String? {
     guard let phonetic = example.phonetic?.trimmingCharacters(in: .whitespacesAndNewlines),
           !phonetic.isEmpty else {
@@ -84,10 +86,24 @@ struct ExampleCardView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
+    DisclosureGroup(isExpanded: $isExpanded) {
+      VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
+        BreakdownChipsView(breakdown: example.breakdown)
+
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
+          Text(example.meaning)
+            .font(.headline)
+          Text(example.explanation)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .padding(.top, DesignSystem.Spacing.tight)
+    } label: {
       HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.compact) {
         Text(example.word)
-          .font(.title3.weight(.bold))
+          .font(.headline)
+          .foregroundStyle(.primary)
 
         Button {
           pronunciationService.speak(example.word)
@@ -96,32 +112,23 @@ struct ExampleCardView: View {
             .font(.subheadline.weight(.semibold))
         }
         .buttonStyle(.borderless)
-        .foregroundStyle(.blue)
         .accessibilityLabel("发音")
         .accessibilityHint("朗读单词发音")
 
         Spacer(minLength: 0)
 
-        Text(normalizedPhonetic ?? "（暂无音标）")
-          .font(.subheadline)
-          .foregroundStyle(normalizedPhonetic == nil ? .tertiary : .secondary)
-      }
-
-      BreakdownChipsView(breakdown: example.breakdown)
-
-      VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
-        Text(example.meaning)
-          .font(.headline)
-        Text(example.explanation)
+        Text(normalizedPhonetic ?? "")
           .font(.subheadline)
           .foregroundStyle(.secondary)
       }
     }
+    .accentColor(DesignSystem.Theme.accent)
     .padding(DesignSystem.Spacing.section)
-    .frame(maxWidth: .infinity, alignment: .leading)
     .background(
       RoundedRectangle(cornerRadius: DesignSystem.Radius.card, style: .continuous)
         .fill(Color(.secondarySystemGroupedBackground))
     )
+    .cardBorder()
+    .animation(DesignSystem.Motion.standard, value: isExpanded)
   }
 }
