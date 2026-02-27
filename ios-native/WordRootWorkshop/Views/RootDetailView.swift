@@ -44,7 +44,7 @@ struct RootDetailView: View {
 
             Image(systemName: "speaker.wave.2.fill")
               .font(.title3.weight(.semibold))
-              .foregroundStyle(.blue)
+              .foregroundStyle(.tint)
           }
         }
         .buttonStyle(.plain)

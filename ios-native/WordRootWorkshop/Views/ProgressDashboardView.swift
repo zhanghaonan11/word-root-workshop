@@ -173,6 +173,7 @@ struct ProgressDashboardView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
+        .controlSize(.large)
         .disabled(isImportingData)
         .accessibilityHint("将当前学习记录导出为 JSON 文件")
 
@@ -183,6 +184,7 @@ struct ProgressDashboardView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
+        .controlSize(.large)
         .disabled(isImportingData)
         .accessibilityHint("从 JSON 文件恢复学习记录")
 
@@ -193,6 +195,7 @@ struct ProgressDashboardView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
+        .controlSize(.large)
         .disabled(isImportingData)
         .accessibilityHint("清除全部学习数据")
       }

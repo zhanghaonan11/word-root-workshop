@@ -53,6 +53,7 @@ struct LearnView: View {
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(.borderedProminent)
+          .controlSize(.large)
           .accessibilityHint("切换到下一个词根并刷新当前题目")
         } else {
           ProgressView("加载词根中...")
@@ -204,7 +205,7 @@ struct LearnView: View {
 
           Image(systemName: "speaker.wave.2.fill")
             .font(.title3.weight(.semibold))
-            .foregroundStyle(.blue)
+            .foregroundStyle(.tint)
         }
       }
       .buttonStyle(.plain)

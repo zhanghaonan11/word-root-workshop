@@ -112,6 +112,7 @@ struct ExampleCardView: View {
             .font(.subheadline.weight(.semibold))
         }
         .buttonStyle(.borderless)
+        .foregroundStyle(.tint)
         .accessibilityLabel("发音")
         .accessibilityHint("朗读单词发音")
 

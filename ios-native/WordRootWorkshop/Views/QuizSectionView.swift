@@ -53,6 +53,7 @@ struct QuizSectionView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
+        .controlSize(.large)
         .disabled(selectedAnswer == nil || hasSubmitted)
 
         if hasSubmitted {
@@ -63,6 +64,7 @@ struct QuizSectionView: View {
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(.bordered)
+          .controlSize(.large)
         }
       }
       .font(.subheadline.weight(.semibold))
