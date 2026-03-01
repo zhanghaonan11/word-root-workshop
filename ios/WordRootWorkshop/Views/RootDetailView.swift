@@ -7,27 +7,44 @@ struct RootDetailView: View {
   @EnvironmentObject private var progressStore: ProgressStore
   @EnvironmentObject private var pronunciationService: PronunciationService
 
+  private enum ScrollAnchor {
+    static let top = "root_detail_top"
+  }
+
   private var root: WordRoot? {
     repository.root(for: rootID)
   }
 
   var body: some View {
-    ScrollView {
-      if let root {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.section) {
-          headerCard(root)
-          examplesCard(root)
-          quizCard(root)
+    ScrollViewReader { proxy in
+      ScrollView {
+        Color.clear
+          .frame(height: 0)
+          .id(ScrollAnchor.top)
+
+        if let root {
+          VStack(alignment: .leading, spacing: DesignSystem.Spacing.section) {
+            headerCard(root)
+            examplesCard(root)
+            quizCard(root)
+          }
+          .padding(DesignSystem.Spacing.page)
+        } else {
+          ContentUnavailableView("词根不存在", systemImage: "questionmark.circle")
+            .padding(.top, 50)
         }
-        .padding(DesignSystem.Spacing.page)
-      } else {
-        ContentUnavailableView("词根不存在", systemImage: "questionmark.circle")
-          .padding(.top, 50)
+      }
+      .navigationTitle(root?.root ?? "词根详情")
+      .navigationBarTitleDisplayMode(.inline)
+      .screenBackground()
+      .onAppear {
+        proxy.scrollTo(ScrollAnchor.top, anchor: .top)
+      }
+      .task(id: rootID) {
+        // 当 rootID 变化（同一页面复用）时，滚动回顶部
+        proxy.scrollTo(ScrollAnchor.top, anchor: .top)
       }
     }
-    .navigationTitle(root?.root ?? "词根详情")
-    .navigationBarTitleDisplayMode(.inline)
-    .screenBackground()
   }
 
   private func headerCard(_ root: WordRoot) -> some View {

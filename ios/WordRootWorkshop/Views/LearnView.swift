@@ -5,6 +5,10 @@ struct LearnView: View {
   @EnvironmentObject private var progressStore: ProgressStore
   @EnvironmentObject private var pronunciationService: PronunciationService
 
+  private enum ScrollAnchor {
+    static let top = "learn_top"
+  }
+
   @State private var currentIndex = 0
   @State private var quizID = UUID()
   @ScaledMetric(relativeTo: .largeTitle) private var rootFontSize: CGFloat = LearnViewConstants.baseRootFontSize
@@ -34,40 +38,56 @@ struct LearnView: View {
   }
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: DesignSystem.Spacing.section) {
-        heroProgressCard
+    ScrollViewReader { proxy in
+      ScrollView {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.section) {
+          Color.clear
+            .frame(height: 0)
+            .id(ScrollAnchor.top)
 
-        if let loadError = repository.loadError {
-          ContentUnavailableView("数据加载失败", systemImage: "exclamationmark.triangle", description: Text(loadError))
-            .frame(maxWidth: .infinity)
-        } else if let root = currentRoot {
-          rootCard(root)
-          examplesCard(root)
-          quizCard(root)
+          heroProgressCard
 
-          Button {
-            moveToNextRoot()
-          } label: {
-            Label("下一个词根", systemImage: "arrow.right.circle.fill")
+          if let loadError = repository.loadError {
+            ContentUnavailableView("数据加载失败", systemImage: "exclamationmark.triangle", description: Text(loadError))
               .frame(maxWidth: .infinity)
+          } else if let root = currentRoot {
+            rootCard(root)
+            examplesCard(root)
+            quizCard(root)
+
+            Button {
+              moveToNextRoot()
+            } label: {
+              Label("下一个词根", systemImage: "arrow.right.circle.fill")
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .accessibilityHint("切换到下一个词根并刷新当前题目")
+          } else {
+            ProgressView("加载词根中...")
+              .frame(maxWidth: .infinity, alignment: .center)
+              .padding(.top, 40)
           }
-          .buttonStyle(.borderedProminent)
-          .controlSize(.large)
-          .accessibilityHint("切换到下一个词根并刷新当前题目")
-        } else {
-          ProgressView("加载词根中...")
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.top, 40)
+        }
+        .padding(DesignSystem.Spacing.page)
+      }
+      .navigationTitle("学习")
+      .screenBackground()
+      .onAppear {
+        syncCurrentIndex()
+        // 进入页面时确保在顶部
+        proxy.scrollTo(ScrollAnchor.top, anchor: .top)
+      }
+      .onChange(of: repository.roots.count) { _, _ in
+        syncCurrentIndex()
+      }
+      .onChange(of: safeIndex) { _, _ in
+        // 切换到下一个词根后，强制回到顶部（否则会停留在按钮附近）
+        withAnimation(DesignSystem.Motion.standard) {
+          proxy.scrollTo(ScrollAnchor.top, anchor: .top)
         }
       }
-      .padding(DesignSystem.Spacing.page)
-    }
-    .navigationTitle("学习")
-    .screenBackground()
-    .onAppear(perform: syncCurrentIndex)
-    .onChange(of: repository.roots.count) { _, _ in
-      syncCurrentIndex()
     }
   }
 
