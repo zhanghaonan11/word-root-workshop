@@ -45,8 +45,11 @@ final class ProgressStore: ObservableObject {
     decoder.dateDecodingStrategy = .iso8601
     self.decoder = decoder
 
-    self.progress = Self.loadProgress(using: userDefaults, decoder: decoder)
-    self.achievements = Self.loadAchievements(using: userDefaults, decoder: decoder)
+    let loadedProgress = Self.loadProgress(using: userDefaults, decoder: decoder)
+    self.progress = Self.sanitizeProgress(loadedProgress)
+    self.achievements = Self.sanitizeAchievements(
+      Self.loadAchievements(using: userDefaults, decoder: decoder)
+    )
     self.masteredRootIDs = Set(progress.masteredRoots)
 
     updateStudyStreakIfNeeded()
@@ -191,16 +194,16 @@ final class ProgressStore: ObservableObject {
 
   func importData(_ data: Data) throws {
     let payload = try decoder.decode(BackupPayload.self, from: data)
-    progress = payload.progress
-    achievements = payload.achievements
+    progress = Self.sanitizeProgress(payload.progress)
+    achievements = Self.sanitizeAchievements(payload.achievements)
     masteredRootIDs = Set(progress.masteredRoots)
     persistImmediately()
   }
 
   func importDataInBackground(_ data: Data) async throws {
     let payload = try await Self.decodePayloadInBackground(data)
-    progress = payload.progress
-    achievements = payload.achievements
+    progress = Self.sanitizeProgress(payload.progress)
+    achievements = Self.sanitizeAchievements(payload.achievements)
     masteredRootIDs = Set(progress.masteredRoots)
     persistImmediately()
   }
@@ -293,6 +296,38 @@ final class ProgressStore: ObservableObject {
     }
 
     return decoded
+  }
+
+  private static func sanitizeProgress(_ progress: LearningProgress) -> LearningProgress {
+    var sanitized = progress
+
+    var seenMasteredRoots = Set<Int>()
+    sanitized.masteredRoots = progress.masteredRoots.filter { rootID in
+      rootID >= 0 && seenMasteredRoots.insert(rootID).inserted
+    }
+
+    sanitized.level = max(1, progress.level)
+    sanitized.currentRootIndex = max(0, progress.currentRootIndex)
+    sanitized.totalScore = max(0, progress.totalScore)
+    sanitized.studyStreak = max(0, progress.studyStreak)
+    sanitized.sessionCount = max(0, progress.sessionCount)
+
+    let minimumLevel = (sanitized.masteredRoots.count / Constants.rootsPerLevel) + 1
+    sanitized.level = max(sanitized.level, minimumLevel)
+
+    let minimumScore = sanitized.masteredRoots.count * Constants.pointsPerMastery
+    sanitized.totalScore = max(sanitized.totalScore, minimumScore)
+
+    return sanitized
+  }
+
+  private static func sanitizeAchievements(_ achievements: [Achievement]) -> [Achievement] {
+    var seenAchievementIDs = Set<String>()
+    let deduplicated = achievements.filter { achievement in
+      seenAchievementIDs.insert(achievement.id).inserted
+    }
+
+    return deduplicated.sorted { $0.unlockedAt < $1.unlockedAt }
   }
 
   private nonisolated static func decodePayloadInBackground(_ data: Data) async throws -> BackupPayload {

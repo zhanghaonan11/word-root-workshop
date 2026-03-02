@@ -11,7 +11,7 @@ struct LearnView: View {
 
   @State private var currentIndex = 0
   @State private var quizID = UUID()
-  @State private var lastQuizWasCorrect: Bool?
+  @State private var lastQuizResult: QuizSectionView.SubmissionResult?
   @ScaledMetric(relativeTo: .largeTitle) private var rootFontSize: CGFloat = LearnViewConstants.baseRootFontSize
 
   private var totalCount: Int {
@@ -56,15 +56,23 @@ struct LearnView: View {
             examplesCard(root)
             quizCard(root)
 
-            Button {
-              moveToNextRoot()
-            } label: {
-              Label(nextStepTitle, systemImage: "arrow.right.circle.fill")
-                .frame(maxWidth: .infinity)
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.tight) {
+              Button {
+                moveToNextRoot()
+              } label: {
+                Label(nextStepTitle, systemImage: "arrow.right.circle.fill")
+                  .frame(maxWidth: .infinity)
+              }
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+              .accessibilityHint(nextStepHint)
+
+              if let nextStepSupportingText {
+                Text(nextStepSupportingText)
+                  .font(.footnote)
+                  .foregroundStyle(.secondary)
+              }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityHint(nextStepHint)
           } else {
             ProgressView("加载词根中...")
               .frame(maxWidth: .infinity, alignment: .center)
@@ -196,8 +204,8 @@ struct LearnView: View {
       onCorrect: {
         progressStore.markRootAsMastered(root.id)
       },
-      onSubmitResult: { isCorrect in
-        lastQuizWasCorrect = isCorrect
+      onSubmitResult: { result in
+        lastQuizResult = result
       }
     )
     .id(quizID)
@@ -256,24 +264,41 @@ struct LearnView: View {
   }
 
   private var nextStepTitle: String {
-    switch lastQuizWasCorrect {
-    case .some(true):
+    switch lastQuizResult {
+    case .some(.correct):
       return "回答正确，继续下一个"
-    case .some(false):
-      return "再看下一个词根"
+    case .some(.incorrect):
+      return "先进入下一个，稍后再复习"
+    case .some(.invalid):
+      return "题目异常，跳到下一个"
     case .none:
       return "下一个词根"
     }
   }
 
   private var nextStepHint: String {
-    switch lastQuizWasCorrect {
-    case .some(true):
+    switch lastQuizResult {
+    case .some(.correct):
       return "你已完成当前测试，切换到下一个词根并刷新题目"
-    case .some(false):
+    case .some(.incorrect):
       return "继续学习下一个词根，并可稍后回来复习本题"
+    case .some(.invalid):
+      return "当前题目无法判题，切换到下一个词根继续学习"
     case .none:
       return "切换到下一个词根并刷新当前题目"
+    }
+  }
+
+  private var nextStepSupportingText: String? {
+    switch lastQuizResult {
+    case .some(.correct):
+      return "当前词根已计入掌握进度。"
+    case .some(.incorrect):
+      return "建议稍后回看当前词根的例词与解释。"
+    case .some(.invalid):
+      return "数据异常不会影响掌握进度，建议后续检查题库。"
+    case .none:
+      return nil
     }
   }
 
@@ -282,7 +307,7 @@ struct LearnView: View {
     currentIndex = (currentIndex + 1) % totalCount
     progressStore.setCurrentRootIndex(currentIndex)
     quizID = UUID()
-    lastQuizWasCorrect = nil
+    lastQuizResult = nil
   }
 
   private func syncCurrentIndex() {
@@ -290,6 +315,7 @@ struct LearnView: View {
     let saved = min(max(progressStore.progress.currentRootIndex, 0), totalCount - 1)
     currentIndex = saved
     quizID = UUID()
+    lastQuizResult = nil
   }
 }
 

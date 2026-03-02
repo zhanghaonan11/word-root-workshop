@@ -4,9 +4,15 @@ import UIKit
 #endif
 
 struct QuizSectionView: View {
+  enum SubmissionResult: Equatable {
+    case correct
+    case incorrect
+    case invalid
+  }
+
   let quiz: WordQuiz
   let onCorrect: () -> Void
-  let onSubmitResult: ((Bool) -> Void)?
+  let onSubmitResult: ((SubmissionResult) -> Void)?
 
   private enum FeedbackState {
     case idle
@@ -18,7 +24,7 @@ struct QuizSectionView: View {
   @State private var selectedAnswer: Int?
   @State private var feedbackState: FeedbackState = .idle
 
-  init(quiz: WordQuiz, onCorrect: @escaping () -> Void, onSubmitResult: ((Bool) -> Void)? = nil) {
+  init(quiz: WordQuiz, onCorrect: @escaping () -> Void, onSubmitResult: ((SubmissionResult) -> Void)? = nil) {
     self.quiz = quiz
     self.onCorrect = onCorrect
     self.onSubmitResult = onSubmitResult
@@ -128,13 +134,18 @@ struct QuizSectionView: View {
 
   @ViewBuilder
   private func feedbackIcon(for index: Int) -> some View {
-    if isSubmitted, quiz.hasValidCorrectAnswer {
-      if index == quiz.correctAnswer {
-        Image(systemName: "checkmark.circle.fill")
-          .foregroundStyle(.green)
+    if isSubmitted {
+      if quiz.hasValidCorrectAnswer {
+        if index == quiz.correctAnswer {
+          Image(systemName: "checkmark.circle.fill")
+            .foregroundStyle(.green)
+        } else if index == selectedAnswer {
+          Image(systemName: "xmark.circle.fill")
+            .foregroundStyle(.red)
+        }
       } else if index == selectedAnswer {
-        Image(systemName: "xmark.circle.fill")
-          .foregroundStyle(.red)
+        Image(systemName: "exclamationmark.triangle.fill")
+          .foregroundStyle(.orange)
       }
     } else if selectedAnswer == index {
       Image(systemName: "checkmark")
@@ -146,6 +157,10 @@ struct QuizSectionView: View {
   private func borderColor(for index: Int) -> Color {
     guard isSubmitted else {
       return selectedAnswer == index ? Color.accentColor.opacity(0.35) : Color(.separator).opacity(0.20)
+    }
+
+    if feedbackState == .invalid, index == selectedAnswer {
+      return Color.orange.opacity(0.35)
     }
 
     if quiz.hasValidCorrectAnswer, index == quiz.correctAnswer {
@@ -165,6 +180,10 @@ struct QuizSectionView: View {
         return Color.accentColor.opacity(0.10)
       }
       return Color(.systemBackground)
+    }
+
+    if feedbackState == .invalid, index == selectedAnswer {
+      return Color.orange.opacity(0.14)
     }
 
     if quiz.hasValidCorrectAnswer, index == quiz.correctAnswer {
@@ -188,19 +207,22 @@ struct QuizSectionView: View {
     guard !isSubmitted else { return }
     guard let selectedAnswer else { return }
 
-    let isCorrect = quiz.hasValidCorrectAnswer && selectedAnswer == quiz.correctAnswer
+    let submissionResult: SubmissionResult
 
     if !quiz.hasValidCorrectAnswer {
       feedbackState = .invalid
-    } else if isCorrect {
+      submissionResult = .invalid
+    } else if selectedAnswer == quiz.correctAnswer {
       feedbackState = .correct
+      submissionResult = .correct
       onCorrect()
     } else {
       feedbackState = .incorrect
+      submissionResult = .incorrect
     }
 
-    onSubmitResult?(isCorrect)
-    hapticResult(isCorrect: isCorrect)
+    onSubmitResult?(submissionResult)
+    hapticResult(for: submissionResult)
   }
 
   private func resetQuiz() {
@@ -228,10 +250,17 @@ struct QuizSectionView: View {
     #endif
   }
 
-  private func hapticResult(isCorrect: Bool) {
+  private func hapticResult(for result: SubmissionResult) {
     #if canImport(UIKit)
     let generator = UINotificationFeedbackGenerator()
-    generator.notificationOccurred(isCorrect ? .success : .error)
+    switch result {
+    case .correct:
+      generator.notificationOccurred(.success)
+    case .incorrect:
+      generator.notificationOccurred(.error)
+    case .invalid:
+      generator.notificationOccurred(.warning)
+    }
     #endif
   }
 

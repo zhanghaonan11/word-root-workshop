@@ -4,7 +4,7 @@ This document summarizes the work completed in the iOS app and what to do next.
 
 Repo path: `/Users/shan/github/word-root-workshop/ios`
 Remote: `origin https://github.com/zhanghaonan11/word-root-workshop.git`
-Branch: `main`
+Branch baseline: `main` (v0.1–v0.3)
 
 ## Goals
 
@@ -13,21 +13,15 @@ Branch: `main`
 
 ## Tooling notes
 
-- Telegram does **not** support ACP thread binding, so we couldn’t keep a thread-bound `runtime="acp"` session.
-- We drove Codex via local **acpx** persistent session (telephone-game style):
-  - Session name: `oc-codex-tg--1003825093721-324`
-  - The codex-acp agent occasionally disconnected with `connection_close`; git history is the source of truth.
-- `rg` (ripgrep) was unavailable in the codex environment; used `find/grep/sed`.
+- `rg` (ripgrep) may be unavailable in some codex environments; fallback to `find/grep/sed`.
 
 ## Delivered versions
-
-All changes are pushed to `origin/main` and tags are pushed.
 
 ### v0.1 (tag: `v0.1`)
 
 Focus: startup load + RootsIndex search/list smoothness + Flashcard drag/animation responsiveness.
 
-Key points (see `ios/CHANGELOG.md` for details):
+Key points:
 - `WordRootRepository`: moved duplicate-id validation and index-building off the main thread; used `Data(contentsOf:options: [.mappedIfSafe])` for `wordRoots.json`.
 - `RootsIndexView`: background index build, cancellable tasks, debounce filtering, and “筛选中...” state to reduce UI thrash.
 - `FlashcardView`: reduced implicit per-frame animations during drag; used `predictedEndTranslation` for swipe decision; reused haptic generator.
@@ -69,6 +63,47 @@ Primary files touched:
 - `WordRootWorkshop/App/WordRootWorkshopApp.swift`
 - `CHANGELOG.md`
 
+### v0.4 (tag: `v0.4`)
+
+Focus (chosen from suggested next iteration):
+- `1) Learning/Quiz flow polish`
+- `3) Design system consistency`
+
+Selection reason:
+- Highest ROI under current priority “交互一致性/数据可靠性”: user-facing clarity improves immediately and changes stay local (low regression risk).
+- Data reliability can be improved with small, isolated normalization logic in `ProgressStore` without changing external APIs.
+
+Acceptance criteria:
+- Quiz submission has explicit states (`correct`/`incorrect`/`invalid`), no ambiguous bool branch.
+- Invalid quiz state uses consistent visual and haptic feedback, aligned with design system semantics.
+- Learn flow CTA/hint/supporting text stay consistent with the latest quiz result and do not leak across roots.
+- Imported/loaded progress data is normalized (dedupe, clamp, sort) to avoid corrupted state propagation.
+- Local iOS simulator generic build passes.
+
+Key points:
+- `QuizSectionView`: `onSubmitResult` upgraded from `Bool` to `SubmissionResult` enum, with explicit invalid-state handling.
+- `QuizSectionView`: invalid-state icon/border/background/haptic unified as warning semantics.
+- `LearnView`: next-step CTA + hint + supporting text are result-driven; result state resets on root switch/sync.
+- `ProgressStore`: load/import sanitization added for progress and achievements (dedupe + bounds + derived minimums).
+- `CHANGELOG.md`: v0.4 notes updated to match interaction consistency and reliability priorities.
+
+Primary files touched:
+- `WordRootWorkshop/Views/QuizSectionView.swift`
+- `WordRootWorkshop/Views/LearnView.swift`
+- `WordRootWorkshop/Services/ProgressStore.swift`
+- `CHANGELOG.md`
+- `HANDOFF.md`
+
+Performance/interaction impact:
+- Interaction: clearer quiz feedback and next-step affordance, reduced state confusion across card transitions.
+- Reliability: safer restore/import path for progress payloads; lower risk of duplicate/invalid persisted state.
+- Performance: sanitization happens only on init/import paths (non-hot path), runtime overhead is negligible.
+
+Rollback points:
+- Full rollback: revert the v0.4 commit (or reset to tag `v0.3`).
+- Partial rollback option A: revert `WordRootWorkshop/Views/QuizSectionView.swift` + `WordRootWorkshop/Views/LearnView.swift`.
+- Partial rollback option B: revert `WordRootWorkshop/Services/ProgressStore.swift` if only data-normalization behavior needs to be removed.
+
 ## Verification
 
 Each version’s `CHANGELOG.md` entry records a local build verification command, e.g.:
@@ -81,23 +116,17 @@ xcodebuild -project WordRootWorkshop.xcodeproj \
   build
 ```
 
-## Current git state (as of this handoff)
+## Current git state (local snapshot)
 
-- `main` includes v0.1–v0.3 changes and is pushed.
-- Tags pushed: `v0.1`, `v0.2`, `v0.3`.
+- `main` baseline includes v0.1–v0.3.
+- v0.4 work exists on feature branch and tag context.
 
-## Suggested next iteration (v0.4)
+## Suggested next iteration (v0.5)
 
 Pick 1–2 to keep scope safe:
 
-1) Learning/Quiz flow polish:
-- Better feedback loops, error states, and micro-interactions.
+1) Measurement-driven performance:
+- Add lightweight startup/view timing instrumentation and align with Instruments baselines.
 
-2) Measurement-driven performance:
-- Add lightweight startup/view timing instrumentation; align with Instruments.
-
-3) Design system consistency:
-- Motion curves, spacing, control sizing, haptics consistency.
-
-4) Small high-value features:
+2) Small high-value features:
 - Search highlight, favorites/marks, review queue strategy.
