@@ -110,9 +110,15 @@ struct RootDetailView: View {
   }
 
   private func quizCard(_ root: WordRoot) -> some View {
-    QuizSectionView(quiz: root.quiz) {
-      progressStore.markRootAsMastered(root.id)
-    }
+    QuizSectionView(
+      quiz: root.quiz,
+      onCorrect: {
+        progressStore.markRootAsMastered(root.id)
+      },
+      onSubmitResult: { _ in
+        // 详情页暂不需要额外联动，保留回调用于统一事件语义。
+      }
+    )
   }
 
   private func examplesCard(_ root: WordRoot) -> some View {

@@ -6,9 +6,23 @@ import UIKit
 struct QuizSectionView: View {
   let quiz: WordQuiz
   let onCorrect: () -> Void
+  let onSubmitResult: ((Bool) -> Void)?
+
+  private enum FeedbackState {
+    case idle
+    case invalid
+    case correct
+    case incorrect
+  }
 
   @State private var selectedAnswer: Int?
-  @State private var hasSubmitted = false
+  @State private var feedbackState: FeedbackState = .idle
+
+  init(quiz: WordQuiz, onCorrect: @escaping () -> Void, onSubmitResult: ((Bool) -> Void)? = nil) {
+    self.quiz = quiz
+    self.onCorrect = onCorrect
+    self.onSubmitResult = onSubmitResult
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: DesignSystem.Spacing.item) {
@@ -39,11 +53,11 @@ struct QuizSectionView: View {
             RoundedRectangle(cornerRadius: DesignSystem.Radius.control, style: .continuous)
               .stroke(borderColor(for: idx), lineWidth: 1)
           )
-          .disabled(hasSubmitted)
+          .disabled(isSubmitted)
         }
       }
       .animation(DesignSystem.Motion.standard, value: selectedAnswer)
-      .animation(DesignSystem.Motion.standard, value: hasSubmitted)
+      .animation(DesignSystem.Motion.standard, value: isSubmitted)
 
       HStack(spacing: DesignSystem.Spacing.compact) {
         Button {
@@ -54,9 +68,9 @@ struct QuizSectionView: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .disabled(selectedAnswer == nil || hasSubmitted)
+        .disabled(selectedAnswer == nil || isSubmitted)
 
-        if hasSubmitted {
+        if isSubmitted {
           Button {
             resetQuiz()
           } label: {
@@ -82,21 +96,28 @@ struct QuizSectionView: View {
     }
   }
 
+  private var isSubmitted: Bool {
+    feedbackState != .idle
+  }
+
   @ViewBuilder
   private var feedbackBanner: some View {
-    if hasSubmitted {
-      if !quiz.hasValidCorrectAnswer {
+    if isSubmitted {
+      switch feedbackState {
+      case .invalid:
         Text("题目数据异常，无法判题。")
           .font(.subheadline.weight(.medium))
           .foregroundStyle(.orange)
-      } else if selectedAnswer == quiz.correctAnswer {
+      case .correct:
         Text("回答正确，已记录为掌握。")
           .font(.subheadline.weight(.medium))
           .foregroundStyle(.green)
-      } else {
+      case .incorrect:
         Text("回答错误，正确答案：\(correctOptionText)")
           .font(.subheadline.weight(.medium))
           .foregroundStyle(.red)
+      case .idle:
+        EmptyView()
       }
     } else {
       Text("选择一个答案后点击“提交答案”。")
@@ -107,7 +128,7 @@ struct QuizSectionView: View {
 
   @ViewBuilder
   private func feedbackIcon(for index: Int) -> some View {
-    if hasSubmitted, quiz.hasValidCorrectAnswer {
+    if isSubmitted, quiz.hasValidCorrectAnswer {
       if index == quiz.correctAnswer {
         Image(systemName: "checkmark.circle.fill")
           .foregroundStyle(.green)
@@ -123,7 +144,7 @@ struct QuizSectionView: View {
   }
 
   private func borderColor(for index: Int) -> Color {
-    guard hasSubmitted else {
+    guard isSubmitted else {
       return selectedAnswer == index ? Color.accentColor.opacity(0.35) : Color(.separator).opacity(0.20)
     }
 
@@ -139,7 +160,7 @@ struct QuizSectionView: View {
   }
 
   private func answerBackground(for index: Int) -> Color {
-    guard hasSubmitted else {
+    guard isSubmitted else {
       if index == selectedAnswer {
         return Color.accentColor.opacity(0.10)
       }
@@ -158,37 +179,46 @@ struct QuizSectionView: View {
   }
 
   private func selectAnswer(index: Int) {
-    guard !hasSubmitted else { return }
+    guard !isSubmitted else { return }
     selectedAnswer = index
     hapticSelection()
   }
 
   private func submitSelectedAnswer() {
-    guard !hasSubmitted else { return }
+    guard !isSubmitted else { return }
     guard let selectedAnswer else { return }
-    hasSubmitted = true
 
-    if quiz.hasValidCorrectAnswer, selectedAnswer == quiz.correctAnswer {
+    let isCorrect = quiz.hasValidCorrectAnswer && selectedAnswer == quiz.correctAnswer
+
+    if !quiz.hasValidCorrectAnswer {
+      feedbackState = .invalid
+    } else if isCorrect {
+      feedbackState = .correct
       onCorrect()
+    } else {
+      feedbackState = .incorrect
     }
-    hapticResult(isCorrect: selectedAnswer == quiz.correctAnswer)
+
+    onSubmitResult?(isCorrect)
+    hapticResult(isCorrect: isCorrect)
   }
 
   private func resetQuiz() {
     selectedAnswer = nil
-    hasSubmitted = false
+    feedbackState = .idle
   }
 
   private var feedbackAccessibilityValue: String {
-    if !hasSubmitted {
+    switch feedbackState {
+    case .idle:
       return "未提交"
-    }
-
-    if !quiz.hasValidCorrectAnswer {
+    case .invalid:
       return "题目数据异常"
+    case .correct:
+      return "回答正确"
+    case .incorrect:
+      return "回答错误"
     }
-
-    return selectedAnswer == quiz.correctAnswer ? "回答正确" : "回答错误"
   }
 
   private func hapticSelection() {
