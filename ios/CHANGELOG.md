@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.3 - 2026-03-02
+
+### Improved
+- 闪卡交互隔离：将拖拽/翻面状态下沉到独立的 `FlashcardInteractiveCard`，减少父视图在手势过程中的无关重绘。
+- 闪卡手势流畅度：拖拽反馈增加轻微缩放与方向提示，滑动判定保持 `predictedEndTranslation`，提升跟手感与可预期性。
+- 闪卡状态一致性：切换卡片时独立卡片状态自动重置，避免翻面/拖拽残留影响下一张卡片。
+- 进度持久化性能：`ProgressStore` 写入改为后台队列 + 防抖合并，降低高频学习交互时主线程 I/O 抖动。
+- 数据一致性：新增 `flushPendingWrites()`，在 `scenePhase` 切换到 `inactive/background` 时强制落盘，减少后台切换导致的数据丢失风险。
+- 导入/清空一致性：导入与清空学习数据走立即持久化路径，确保关键操作结果可恢复。
+
+### Verified
+- 本地构建验证通过：
+  - `xcodebuild -project WordRootWorkshop.xcodeproj -scheme WordRootWorkshop -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData build`
+
 ## v0.2 - 2026-03-02
 
 ### Added

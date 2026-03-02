@@ -17,8 +17,13 @@ struct WordRootWorkshopApp: App {
         .appTheming()
     }
     .onChange(of: scenePhase) { _, newPhase in
-      if newPhase == .active {
+      switch newPhase {
+      case .active:
         progressStore.updateStudyStreakIfNeeded()
+      case .inactive, .background:
+        progressStore.flushPendingWrites()
+      @unknown default:
+        break
       }
     }
   }

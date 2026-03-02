@@ -1,12 +1,16 @@
 import Foundation
 
+private let progressStoreProgressKey = "wordRootProgress"
+private let progressStoreAchievementsKey = "wordRootAchievements"
+private let progressStorePersistenceDebounceSeconds: TimeInterval = 0.25
+
+private struct ProgressPersistenceSnapshot {
+  let progress: LearningProgress
+  let achievements: [Achievement]
+}
+
 @MainActor
 final class ProgressStore: ObservableObject {
-  private enum Keys {
-    static let progress = "wordRootProgress"
-    static let achievements = "wordRootAchievements"
-  }
-
   private enum Constants {
     static let pointsPerMastery = 10
     static let rootsPerLevel = 10
@@ -22,10 +26,16 @@ final class ProgressStore: ObservableObject {
   private let encoder: JSONEncoder
   private let decoder: JSONDecoder
   private let calendar: Calendar
+  private let persistenceQueue: DispatchQueue
+  private var persistenceWorkItem: DispatchWorkItem?
 
   init(userDefaults: UserDefaults = .standard, calendar: Calendar = .current) {
     self.userDefaults = userDefaults
     self.calendar = calendar
+    self.persistenceQueue = DispatchQueue(
+      label: "com.shan.wordrootworkshop.progress.persistence",
+      qos: .utility
+    )
 
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
@@ -104,12 +114,17 @@ final class ProgressStore: ObservableObject {
       break
     }
 
-    saveProgress()
+    schedulePersistence()
   }
 
   func setCurrentRootIndex(_ index: Int) {
-    progress.currentRootIndex = max(0, index)
-    saveProgress()
+    let clampedIndex = max(0, index)
+    guard progress.currentRootIndex != clampedIndex else {
+      return
+    }
+
+    progress.currentRootIndex = clampedIndex
+    schedulePersistence()
   }
 
   func updateStudyStreakIfNeeded(now: Date = Date()) {
@@ -124,7 +139,7 @@ final class ProgressStore: ObservableObject {
       progress.studyStreak = 1
       progress.lastStudyDate = now
       progress.sessionCount += 1
-      saveProgress()
+      schedulePersistence()
       return
     }
 
@@ -155,15 +170,14 @@ final class ProgressStore: ObservableObject {
       )
     }
 
-    saveProgress()
+    schedulePersistence()
   }
 
   func clearAll() {
     progress = .initial
     achievements = []
     masteredRootIDs = []
-    saveProgress()
-    saveAchievements()
+    persistImmediately()
   }
 
   func exportData() throws -> Data {
@@ -180,8 +194,7 @@ final class ProgressStore: ObservableObject {
     progress = payload.progress
     achievements = payload.achievements
     masteredRootIDs = Set(progress.masteredRoots)
-    saveProgress()
-    saveAchievements()
+    persistImmediately()
   }
 
   func importDataInBackground(_ data: Data) async throws {
@@ -189,8 +202,11 @@ final class ProgressStore: ObservableObject {
     progress = payload.progress
     achievements = payload.achievements
     masteredRootIDs = Set(progress.masteredRoots)
-    saveProgress()
-    saveAchievements()
+    persistImmediately()
+  }
+
+  func flushPendingWrites() {
+    persistImmediately()
   }
 
   private func unlockAchievement(id: String, type: String, title: String, description: String, icon: String) {
@@ -208,26 +224,58 @@ final class ProgressStore: ObservableObject {
     )
     achievements.append(achievement)
     achievements.sort { $0.unlockedAt < $1.unlockedAt }
-    saveAchievements()
   }
 
-  private func saveProgress() {
-    guard let data = try? encoder.encode(progress) else {
-      return
+  private func schedulePersistence() {
+    persistenceWorkItem?.cancel()
+
+    let snapshot = ProgressPersistenceSnapshot(
+      progress: progress,
+      achievements: achievements
+    )
+    let defaults = userDefaults
+
+    let workItem = DispatchWorkItem {
+      Self.persist(snapshot, to: defaults)
     }
-    userDefaults.set(data, forKey: Keys.progress)
+
+    persistenceWorkItem = workItem
+    persistenceQueue.asyncAfter(
+      deadline: .now() + progressStorePersistenceDebounceSeconds,
+      execute: workItem
+    )
   }
 
-  private func saveAchievements() {
-    guard let data = try? encoder.encode(achievements) else {
-      return
+  private func persistImmediately() {
+    persistenceWorkItem?.cancel()
+    persistenceWorkItem = nil
+
+    let snapshot = ProgressPersistenceSnapshot(
+      progress: progress,
+      achievements: achievements
+    )
+    let defaults = userDefaults
+
+    persistenceQueue.sync {
+      Self.persist(snapshot, to: defaults)
     }
-    userDefaults.set(data, forKey: Keys.achievements)
+  }
+
+  private nonisolated static func persist(_ snapshot: ProgressPersistenceSnapshot, to defaults: UserDefaults) {
+    let encoder = makeEncoder()
+
+    if let progressData = try? encoder.encode(snapshot.progress) {
+      defaults.set(progressData, forKey: progressStoreProgressKey)
+    }
+
+    if let achievementsData = try? encoder.encode(snapshot.achievements) {
+      defaults.set(achievementsData, forKey: progressStoreAchievementsKey)
+    }
   }
 
   private static func loadProgress(using defaults: UserDefaults, decoder: JSONDecoder) -> LearningProgress {
     guard
-      let data = defaults.data(forKey: Keys.progress),
+      let data = defaults.data(forKey: progressStoreProgressKey),
       let decoded = try? decoder.decode(LearningProgress.self, from: data)
     else {
       return .initial
@@ -238,7 +286,7 @@ final class ProgressStore: ObservableObject {
 
   private static func loadAchievements(using defaults: UserDefaults, decoder: JSONDecoder) -> [Achievement] {
     guard
-      let data = defaults.data(forKey: Keys.achievements),
+      let data = defaults.data(forKey: progressStoreAchievementsKey),
       let decoded = try? decoder.decode([Achievement].self, from: data)
     else {
       return []
@@ -254,5 +302,11 @@ final class ProgressStore: ObservableObject {
       return try decoder.decode(BackupPayload.self, from: data)
     }
     .value
+  }
+
+  private nonisolated static func makeEncoder() -> JSONEncoder {
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    return encoder
   }
 }

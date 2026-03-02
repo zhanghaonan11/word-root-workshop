@@ -10,9 +10,6 @@ struct FlashcardView: View {
   @StateObject private var haptics = FlashcardHaptics()
 
   @State private var currentIndex = 0
-  @State private var isFlipped = false
-  @State private var restingDragOffset: CGFloat = 0
-  @GestureState private var dragTranslation: CGFloat = 0
 
   private var roots: [WordRoot] { repository.roots }
 
@@ -40,46 +37,34 @@ struct FlashcardView: View {
     return progressStore.isMastered(rootID: currentRoot.id)
   }
 
-  private var effectiveDragOffset: CGFloat {
-    guard canNavigate else { return 0 }
-    return restingDragOffset + dragTranslation
-  }
-
-  private var cardTiltAngle: Double {
-    let normalized = effectiveDragOffset / 26
-    let clamped = min(max(normalized, -12), 12)
-    return Double(clamped)
-  }
-
-  private var cardSwipeGesture: some Gesture {
-    DragGesture(minimumDistance: 16)
-      .updating($dragTranslation) { value, state, _ in
-        guard canNavigate else { return }
-        state = value.translation.width
-      }
-      .onEnded(handleCardDragEnded)
-  }
-
   var body: some View {
     VStack(spacing: DesignSystem.Spacing.section) {
       if let root = currentRoot {
         headerCard
 
-        Button {
-          withAnimation(DesignSystem.Motion.standard) {
-            isFlipped.toggle()
+        FlashcardInteractiveCard(
+          root: root,
+          canNavigate: canNavigate,
+          onFlip: {
+            haptics.light()
+          },
+          onSwipeNext: {
+            nextCard()
+            haptics.light()
+          },
+          onSwipePrevious: {
+            prevCard()
+            haptics.light()
           }
-          haptics.light()
-        } label: {
-          FlashcardContent(root: root, isFlipped: isFlipped)
+        )
+        .id(root.id)
+
+        if canNavigate {
+          Text("左右滑动切换卡片")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("翻转卡片")
-        .accessibilityValue(isFlipped ? "当前为背面" : "当前为正面")
-        .accessibilityHint("双击可在正反面之间切换")
-        .offset(x: effectiveDragOffset)
-        .rotationEffect(.degrees(cardTiltAngle))
-        .simultaneousGesture(cardSwipeGesture)
 
         controlButtons
       } else if let loadError = repository.loadError {
@@ -172,28 +157,22 @@ struct FlashcardView: View {
   private func syncCurrentIndex() {
     guard !roots.isEmpty else { return }
     currentIndex = min(max(progressStore.progress.currentRootIndex, 0), roots.count - 1)
-    isFlipped = false
-    restingDragOffset = 0
   }
 
   private func nextCard() {
     guard !roots.isEmpty else { return }
     withAnimation(DesignSystem.Motion.spring) {
       currentIndex = (safeIndex + 1) % roots.count
-      restingDragOffset = 0
     }
     progressStore.setCurrentRootIndex(currentIndex)
-    isFlipped = false
   }
 
   private func prevCard() {
     guard !roots.isEmpty else { return }
     withAnimation(DesignSystem.Motion.spring) {
       currentIndex = (safeIndex - 1 + roots.count) % roots.count
-      restingDragOffset = 0
     }
     progressStore.setCurrentRootIndex(currentIndex)
-    isFlipped = false
   }
 
   private func markKnown() {
@@ -202,6 +181,70 @@ struct FlashcardView: View {
     progressStore.markRootAsMastered(root.id)
     haptics.success()
     nextCard()
+  }
+}
+
+private struct FlashcardInteractiveCard: View {
+  let root: WordRoot
+  let canNavigate: Bool
+  let onFlip: () -> Void
+  let onSwipeNext: () -> Void
+  let onSwipePrevious: () -> Void
+
+  @State private var isFlipped = false
+  @State private var restingDragOffset: CGFloat = 0
+  @GestureState private var dragTranslation: CGFloat = 0
+
+  private var effectiveDragOffset: CGFloat {
+    guard canNavigate else { return 0 }
+    return restingDragOffset + dragTranslation
+  }
+
+  private var dragProgress: CGFloat {
+    min(max(abs(effectiveDragOffset) / 160, 0), 1)
+  }
+
+  private var cardTiltAngle: Double {
+    let normalized = effectiveDragOffset / 26
+    let clamped = min(max(normalized, -12), 12)
+    return Double(clamped)
+  }
+
+  private var cardSwipeGesture: some Gesture {
+    DragGesture(minimumDistance: 16)
+      .updating($dragTranslation) { value, state, _ in
+        guard canNavigate else { return }
+        state = value.translation.width
+      }
+      .onEnded(handleCardDragEnded)
+  }
+
+  var body: some View {
+    Button {
+      withAnimation(DesignSystem.Motion.standard) {
+        isFlipped.toggle()
+      }
+      onFlip()
+    } label: {
+      FlashcardContent(root: root, isFlipped: isFlipped)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("翻转卡片")
+    .accessibilityValue(isFlipped ? "当前为背面" : "当前为正面")
+    .accessibilityHint("双击可在正反面之间切换")
+    .offset(x: effectiveDragOffset)
+    .rotationEffect(.degrees(cardTiltAngle))
+    .scaleEffect(1 - (dragProgress * 0.03))
+    .overlay(alignment: effectiveDragOffset >= 0 ? .leading : .trailing) {
+      if canNavigate, dragProgress > 0.15 {
+        Image(systemName: effectiveDragOffset >= 0 ? "chevron.left.circle.fill" : "chevron.right.circle.fill")
+          .font(.title2)
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, DesignSystem.Spacing.compact)
+          .opacity(dragProgress)
+      }
+    }
+    .simultaneousGesture(cardSwipeGesture)
   }
 
   private func handleCardDragEnded(_ value: DragGesture.Value) {
@@ -214,11 +257,11 @@ struct FlashcardView: View {
     let projectedTranslation = value.predictedEndTranslation.width
 
     if projectedTranslation < -threshold {
-      nextCard()
-      haptics.light()
+      isFlipped = false
+      onSwipeNext()
     } else if projectedTranslation > threshold {
-      prevCard()
-      haptics.light()
+      isFlipped = false
+      onSwipePrevious()
     } else {
       restingDragOffset = value.translation.width
       withAnimation(DesignSystem.Motion.spring) {
