@@ -1,19 +1,7 @@
 import SwiftUI
 
-private struct RootListItem: Identifiable, Hashable {
-  let id: Int
-  let root: String
-  let origin: String
-  let meaning: String
-  let category: WordRootCategory
-  let examplesPreview: String
-}
-
 struct RootsIndexView: View {
-  private struct SearchEntry {
-    let item: RootListItem
-    let searchableText: String
-  }
+  private typealias SearchEntry = WordRootRepository.SearchIndexRecord
 
   private static let searchQueue = DispatchQueue(
     label: "com.shan.wordrootworkshop.search",
@@ -27,7 +15,7 @@ struct RootsIndexView: View {
   @State private var query = ""
   @State private var selectedCategory: WordRootCategory = .all
   @State private var indexedRoots: [SearchEntry] = []
-  @State private var filteredRoots: [RootListItem] = []
+  @State private var filteredRoots: [SearchEntry] = []
   @State private var isFiltering = false
 
   @State private var indexingWorkItem: DispatchWorkItem?
@@ -54,7 +42,7 @@ struct RootsIndexView: View {
             NavigationLink {
               RootDetailView(rootID: root.id)
             } label: {
-              RootRow(item: root, isMastered: progressStore.isMastered(rootID: root.id))
+              RootRow(entry: root, isMastered: progressStore.isMastered(rootID: root.id))
                 .equatable()
             }
             .listRowBackground(Color.clear)
@@ -121,7 +109,7 @@ struct RootsIndexView: View {
     .onChange(of: selectedCategory) { _, _ in
       scheduleRefilter()
     }
-    .onChange(of: repository.roots) { _, _ in
+    .onChange(of: repository.searchIndex) { _, _ in
       rebuildSearchIndex()
     }
   }
@@ -144,8 +132,8 @@ struct RootsIndexView: View {
     isFiltering = true
 
     let workItem = DispatchWorkItem {
-      let results = indexedRoots.compactMap { entry -> RootListItem? in
-        guard selectedCategory == .all || entry.item.category == selectedCategory else {
+      let results = indexedRoots.compactMap { entry -> SearchEntry? in
+        guard selectedCategory == .all || entry.category == selectedCategory else {
           return nil
         }
 
@@ -153,7 +141,7 @@ struct RootsIndexView: View {
           return nil
         }
 
-        return entry.item
+        return entry
       }
 
       DispatchQueue.main.async {
@@ -175,30 +163,14 @@ struct RootsIndexView: View {
 
     indexingToken &+= 1
     let token = indexingToken
-    let roots = repository.roots
+    let sourceEntries = repository.searchIndex
 
     isFiltering = true
 
     let workItem = DispatchWorkItem {
-      let entries = roots.map { root in
-        let item = RootListItem(
-          id: root.id,
-          root: root.root,
-          origin: root.origin,
-          meaning: root.meaning,
-          category: root.category,
-          examplesPreview: root.examples.prefix(3).map(\.word).joined(separator: "、")
-        )
-
-        return SearchEntry(
-          item: item,
-          searchableText: Self.buildSearchableText(for: root)
-        )
-      }
-
       DispatchQueue.main.async {
         guard token == indexingToken else { return }
-        indexedRoots = entries
+        indexedRoots = sourceEntries
         scheduleRefilter(immediate: true)
       }
     }
@@ -212,27 +184,16 @@ struct RootsIndexView: View {
       .trimmingCharacters(in: .whitespacesAndNewlines)
       .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
   }
-
-  private static func buildSearchableText(for root: WordRoot) -> String {
-    let baseSegments = [root.root, root.origin, root.meaning, root.description]
-    let exampleSegments = root.examples.flatMap { example in
-      [example.word, example.meaning, example.explanation]
-    }
-
-    return (baseSegments + exampleSegments)
-      .joined(separator: " ")
-      .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-  }
 }
 
 private struct RootRow: View, Equatable {
-  let item: RootListItem
+  let entry: WordRootRepository.SearchIndexRecord
   let isMastered: Bool
 
   var body: some View {
     VStack(alignment: .leading, spacing: DesignSystem.Spacing.tight) {
       HStack(alignment: .firstTextBaseline) {
-        Text(item.root)
+        Text(entry.root)
           .font(.headline)
 
         Spacer()
@@ -253,24 +214,24 @@ private struct RootRow: View, Equatable {
         }
       }
 
-      Text(item.meaning)
+      Text(entry.meaning)
         .font(.subheadline.weight(.semibold))
 
       HStack(spacing: DesignSystem.Spacing.tight) {
-        Text(item.origin)
+        Text(entry.origin)
           .font(.footnote.weight(.semibold))
           .padding(.horizontal, DesignSystem.Spacing.tight)
           .padding(.vertical, DesignSystem.Spacing.xxSmall)
           .background(Color.blue.opacity(0.12), in: Capsule(style: .continuous))
 
-        Text("#\(item.id)")
+        Text("#\(entry.id)")
           .font(.footnote.monospacedDigit())
           .foregroundStyle(.secondary)
 
         Spacer(minLength: 0)
       }
 
-      Text(item.examplesPreview)
+      Text(entry.examplesPreview)
         .font(.caption)
         .foregroundStyle(.secondary)
         .lineLimit(1)
@@ -283,7 +244,7 @@ private struct RootRow: View, Equatable {
     .cardBorder()
     .contentShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.card, style: .continuous))
     .accessibilityElement(children: .combine)
-    .accessibilityLabel("\(item.root)，\(item.meaning)")
+    .accessibilityLabel("\(entry.root)，\(entry.meaning)")
     .accessibilityHint(isMastered ? "已掌握词根，双击查看详情" : "双击查看词根详情")
   }
 }

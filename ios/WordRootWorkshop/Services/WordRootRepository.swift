@@ -1,10 +1,32 @@
+import CryptoKit
 import Foundation
+
+private let wordRootsCacheSchemaVersion = 1
+private let wordRootsCacheFileName = "word_roots_cache_v1.plist"
 
 @MainActor
 final class WordRootRepository: ObservableObject {
+  struct SearchIndexRecord: Codable, Hashable, Identifiable {
+    let id: Int
+    let root: String
+    let origin: String
+    let meaning: String
+    let category: WordRootCategory
+    let examplesPreview: String
+    let searchableText: String
+  }
+
   private struct LoadedRootsSnapshot {
     let roots: [WordRoot]
     let rootsByID: [Int: WordRoot]
+    let searchIndex: [SearchIndexRecord]
+  }
+
+  private struct PersistedCachePayload: Codable {
+    let schemaVersion: Int
+    let sourceDigest: String
+    let roots: [WordRoot]
+    let searchIndex: [SearchIndexRecord]
   }
 
   struct StartupIssue: Identifiable, Equatable {
@@ -41,6 +63,7 @@ final class WordRootRepository: ObservableObject {
   @Published private(set) var roots: [WordRoot] = []
   @Published private(set) var loadError: String?
   @Published private(set) var startupIssue: StartupIssue?
+  @Published private(set) var searchIndex: [SearchIndexRecord] = []
 
   private var rootsByID: [Int: WordRoot] = [:]
   private var loadTask: Task<Void, Never>?
@@ -86,6 +109,7 @@ final class WordRootRepository: ObservableObject {
 
         roots = []
         rootsByID = [:]
+        searchIndex = []
         let resolvedError = Self.resolveRepositoryError(from: error)
         loadError = resolvedError.localizedDescription
         startupIssue = Self.makeStartupIssue(from: resolvedError)
@@ -100,6 +124,7 @@ final class WordRootRepository: ObservableObject {
   private func applyLoadedSnapshot(_ loadedSnapshot: LoadedRootsSnapshot) {
     roots = loadedSnapshot.roots
     rootsByID = loadedSnapshot.rootsByID
+    searchIndex = loadedSnapshot.searchIndex
     loadError = nil
     startupIssue = nil
   }
@@ -157,40 +182,9 @@ final class WordRootRepository: ObservableObject {
   }
 
   nonisolated static func loadRoots(from bundle: Bundle) throws -> [WordRoot] {
-    // NOTE: Duplicate ID validation is handled during background loading,
-    // so we can surface a friendly, recoverable startup error instead of trapping.
-
-    let resourceName = "wordRoots.json"
-    guard let url = bundle.url(forResource: "wordRoots", withExtension: "json") else {
-      throw RepositoryError.resourceMissing(
-        resourceName: resourceName,
-        bundlePath: bundle.bundlePath
-      )
-    }
-
-    let data: Data
-    do {
-      data = try Data(contentsOf: url, options: [.mappedIfSafe])
-    } catch {
-      throw RepositoryError.fileReadFailed(
-        filePath: url.path,
-        underlyingMessage: error.localizedDescription
-      )
-    }
-
-    guard !data.isEmpty else {
-      throw RepositoryError.emptyData(filePath: url.path)
-    }
-
-    let decoder = JSONDecoder()
-    do {
-      return try decoder.decode([WordRoot].self, from: data)
-    } catch {
-      throw RepositoryError.decodeFailed(
-        filePath: url.path,
-        underlyingMessage: error.localizedDescription
-      )
-    }
+    let resourceURL = try resourceURL(in: bundle)
+    let data = try readResourceData(from: resourceURL)
+    return try decodeRoots(from: data, filePath: resourceURL.path)
   }
 
   private nonisolated static func loadRootsInBackground(bundlePath: String) async throws -> LoadedRootsSnapshot {
@@ -204,7 +198,45 @@ final class WordRootRepository: ObservableObject {
             )
           }
 
-          let loadedRoots = try loadRoots(from: bundle)
+          let resourceURL = try resourceURL(in: bundle)
+          let sourceData = try readResourceData(from: resourceURL)
+          let sourceDigest = digestHex(for: sourceData)
+
+          let loadedRoots: [WordRoot]
+          let loadedSearchIndex: [SearchIndexRecord]
+
+          if let payload = loadPersistedCache(),
+             payload.schemaVersion == wordRootsCacheSchemaVersion,
+             payload.sourceDigest == sourceDigest {
+            loadedRoots = payload.roots
+
+            if payload.searchIndex.count == payload.roots.count {
+              loadedSearchIndex = payload.searchIndex
+            } else {
+              loadedSearchIndex = buildSearchIndex(from: payload.roots)
+              persistCache(
+                PersistedCachePayload(
+                  schemaVersion: wordRootsCacheSchemaVersion,
+                  sourceDigest: sourceDigest,
+                  roots: payload.roots,
+                  searchIndex: loadedSearchIndex
+                )
+              )
+            }
+          } else {
+            loadedRoots = try decodeRoots(from: sourceData, filePath: resourceURL.path)
+            loadedSearchIndex = buildSearchIndex(from: loadedRoots)
+
+            persistCache(
+              PersistedCachePayload(
+                schemaVersion: wordRootsCacheSchemaVersion,
+                sourceDigest: sourceDigest,
+                roots: loadedRoots,
+                searchIndex: loadedSearchIndex
+              )
+            )
+          }
+
           let duplicateIDs = findDuplicateIDs(in: loadedRoots)
           if !duplicateIDs.isEmpty {
             throw RepositoryError.duplicateIDs(ids: duplicateIDs)
@@ -214,7 +246,8 @@ final class WordRootRepository: ObservableObject {
           continuation.resume(
             returning: LoadedRootsSnapshot(
               roots: loadedRoots,
-              rootsByID: rootsByID
+              rootsByID: rootsByID,
+              searchIndex: loadedSearchIndex
             )
           )
         } catch {
@@ -246,5 +279,120 @@ final class WordRootRepository: ObservableObject {
     }
 
     return duplicates.sorted()
+  }
+
+  private nonisolated static func resourceURL(in bundle: Bundle) throws -> URL {
+    guard let url = bundle.url(forResource: "wordRoots", withExtension: "json") else {
+      throw RepositoryError.resourceMissing(
+        resourceName: "wordRoots.json",
+        bundlePath: bundle.bundlePath
+      )
+    }
+
+    return url
+  }
+
+  private nonisolated static func readResourceData(from url: URL) throws -> Data {
+    let data: Data
+    do {
+      data = try Data(contentsOf: url, options: [.mappedIfSafe])
+    } catch {
+      throw RepositoryError.fileReadFailed(
+        filePath: url.path,
+        underlyingMessage: error.localizedDescription
+      )
+    }
+
+    guard !data.isEmpty else {
+      throw RepositoryError.emptyData(filePath: url.path)
+    }
+
+    return data
+  }
+
+  private nonisolated static func decodeRoots(from data: Data, filePath: String) throws -> [WordRoot] {
+    let decoder = JSONDecoder()
+
+    do {
+      return try decoder.decode([WordRoot].self, from: data)
+    } catch {
+      throw RepositoryError.decodeFailed(
+        filePath: filePath,
+        underlyingMessage: error.localizedDescription
+      )
+    }
+  }
+
+  private nonisolated static func buildSearchIndex(from roots: [WordRoot]) -> [SearchIndexRecord] {
+    roots.map { root in
+      SearchIndexRecord(
+        id: root.id,
+        root: root.root,
+        origin: root.origin,
+        meaning: root.meaning,
+        category: root.category,
+        examplesPreview: root.examples.prefix(3).map(\.word).joined(separator: "、"),
+        searchableText: buildSearchableText(for: root)
+      )
+    }
+  }
+
+  private nonisolated static func buildSearchableText(for root: WordRoot) -> String {
+    let baseSegments = [root.root, root.origin, root.meaning, root.description]
+    let exampleSegments = root.examples.flatMap { example in
+      [example.word, example.meaning, example.explanation]
+    }
+
+    return (baseSegments + exampleSegments)
+      .joined(separator: " ")
+      .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+  }
+
+  private nonisolated static func digestHex(for data: Data) -> String {
+    let digest = SHA256.hash(data: data)
+    return digest.map { String(format: "%02x", $0) }.joined()
+  }
+
+  private nonisolated static func cacheFileURL() throws -> URL {
+    let fileManager = FileManager.default
+    let appSupportDirectory = try fileManager.url(
+      for: .applicationSupportDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    )
+
+    let cacheDirectory = appSupportDirectory
+      .appendingPathComponent("WordRootWorkshop", isDirectory: true)
+
+    if !fileManager.fileExists(atPath: cacheDirectory.path) {
+      try fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
+
+    return cacheDirectory.appendingPathComponent(wordRootsCacheFileName)
+  }
+
+  private nonisolated static func loadPersistedCache() -> PersistedCachePayload? {
+    guard
+      let cacheURL = try? cacheFileURL(),
+      let data = try? Data(contentsOf: cacheURL, options: [.mappedIfSafe])
+    else {
+      return nil
+    }
+
+    let decoder = PropertyListDecoder()
+    return try? decoder.decode(PersistedCachePayload.self, from: data)
+  }
+
+  private nonisolated static func persistCache(_ payload: PersistedCachePayload) {
+    do {
+      let encoder = PropertyListEncoder()
+      encoder.outputFormat = .binary
+      let data = try encoder.encode(payload)
+      let cacheURL = try cacheFileURL()
+      try data.write(to: cacheURL, options: [.atomic])
+    } catch {
+      // 缓存失败不影响主流程，直接回退为下次重新构建。
+    }
   }
 }

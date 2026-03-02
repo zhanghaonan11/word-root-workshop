@@ -1,6 +1,6 @@
 import Foundation
 
-enum WordRootCategory: String, CaseIterable, Identifiable {
+enum WordRootCategory: String, CaseIterable, Identifiable, Codable {
   case all
   case prefix
   case root

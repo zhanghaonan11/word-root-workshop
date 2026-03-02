@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.2 - 2026-03-02
+
+### Added
+- 启动持久化缓存：新增 Application Support 缓存文件 `word_roots_cache_v1.plist`，缓存已解析词根与搜索索引。
+- 缓存版本治理：缓存 payload 增加 `schemaVersion` 与源数据 `SHA256` 摘要字段。
+
+### Improved
+- 启动性能：当 `wordRoots.json` 内容未变化时，优先读取持久化缓存，跳过 JSON 重新解析与索引重建。
+- 缓存失效：当 `wordRoots.json` 变更（摘要不一致）或 schema 版本不匹配时，自动回退重建并刷新缓存。
+- 仓储层：`WordRootRepository` 统一产出 `searchIndex`，避免页面层在每次启动后重复生成 searchable 文本。
+- 列表渲染：`RootsIndexView` 直接消费预构建索引记录，行内容改为稳定标识+预格式化字段，进一步减少滚动时计算开销。
+- 列表筛选：筛选阶段只做分类和字符串匹配，不再重复进行例词拼接或 searchable 文本构建。
+
+### Verified
+- 本地构建验证通过：
+  - `xcodebuild -project WordRootWorkshop.xcodeproj -scheme WordRootWorkshop -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData build`
+
 ## v0.1 - 2026-03-02
 
 ### Added
