@@ -11,6 +11,7 @@ struct LearnView: View {
 
   @State private var currentIndex = 0
   @State private var quizID = UUID()
+  @State private var lastQuizWasCorrect: Bool?
   @ScaledMetric(relativeTo: .largeTitle) private var rootFontSize: CGFloat = LearnViewConstants.baseRootFontSize
 
   private var totalCount: Int {
@@ -58,12 +59,12 @@ struct LearnView: View {
             Button {
               moveToNextRoot()
             } label: {
-              Label("下一个词根", systemImage: "arrow.right.circle.fill")
+              Label(nextStepTitle, systemImage: "arrow.right.circle.fill")
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .accessibilityHint("切换到下一个词根并刷新当前题目")
+            .accessibilityHint(nextStepHint)
           } else {
             ProgressView("加载词根中...")
               .frame(maxWidth: .infinity, alignment: .center)
@@ -190,9 +191,15 @@ struct LearnView: View {
   }
 
   private func quizCard(_ root: WordRoot) -> some View {
-    QuizSectionView(quiz: root.quiz) {
-      progressStore.markRootAsMastered(root.id)
-    }
+    QuizSectionView(
+      quiz: root.quiz,
+      onCorrect: {
+        progressStore.markRootAsMastered(root.id)
+      },
+      onSubmitResult: { isCorrect in
+        lastQuizWasCorrect = isCorrect
+      }
+    )
     .id(quizID)
     .padding(.vertical, 2)
   }
@@ -248,11 +255,34 @@ struct LearnView: View {
     }
   }
 
+  private var nextStepTitle: String {
+    switch lastQuizWasCorrect {
+    case .some(true):
+      return "回答正确，继续下一个"
+    case .some(false):
+      return "再看下一个词根"
+    case .none:
+      return "下一个词根"
+    }
+  }
+
+  private var nextStepHint: String {
+    switch lastQuizWasCorrect {
+    case .some(true):
+      return "你已完成当前测试，切换到下一个词根并刷新题目"
+    case .some(false):
+      return "继续学习下一个词根，并可稍后回来复习本题"
+    case .none:
+      return "切换到下一个词根并刷新当前题目"
+    }
+  }
+
   private func moveToNextRoot() {
     guard totalCount > 0 else { return }
     currentIndex = (currentIndex + 1) % totalCount
     progressStore.setCurrentRootIndex(currentIndex)
     quizID = UUID()
+    lastQuizWasCorrect = nil
   }
 
   private func syncCurrentIndex() {

@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.4 - 2026-03-02
+
+### Added
+- DEBUG 启动阶段性能埋点：新增 `WordRootRepository` 资源读取/解码/索引构建/字典构建/总耗时日志。
+- DEBUG 首屏启动耗时日志：在 `WordRootWorkshopApp` 记录 `RootTabView` 首次出现耗时。
+- DEBUG 索引页性能埋点：`RootsIndexView` 增加索引应用与筛选耗时（含结果数量）日志，便于 Instruments 对照。
+
+### Improved
+- 小测反馈状态更清晰：`QuizSectionView` 使用显式反馈状态（未提交/正确/错误/题目异常），避免布尔状态歧义。
+- 小测提交回调：`QuizSectionView` 新增 `onSubmitResult`，向上层暴露提交结果，便于学习流联动。
+- 学习流下一步 CTA 联动：`LearnView` 根据最近一次答题结果动态调整“下一步”按钮文案与辅助说明。
+
+### Verified
+- 本地构建验证通过：
+  - `xcodebuild -project WordRootWorkshop.xcodeproj -scheme WordRootWorkshop -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData build`
+
 ## v0.3 - 2026-03-02
 
 ### Improved
