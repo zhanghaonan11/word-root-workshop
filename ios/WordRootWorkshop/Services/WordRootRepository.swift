@@ -2,6 +2,11 @@ import Foundation
 
 @MainActor
 final class WordRootRepository: ObservableObject {
+  private struct LoadedRootsSnapshot {
+    let roots: [WordRoot]
+    let rootsByID: [Int: WordRoot]
+  }
+
   struct StartupIssue: Identifiable, Equatable {
     let id: String
     let title: String
@@ -52,16 +57,11 @@ final class WordRootRepository: ObservableObject {
       guard let self else { return }
 
       do {
-        let loaded = try await Self.loadRootsInBackground(bundlePath: bundlePath)
+        let loadedSnapshot = try await Self.loadRootsInBackground(bundlePath: bundlePath)
         guard !Task.isCancelled else { return }
 
-        let duplicates = Self.findDuplicateIDs(in: loaded)
-        if !duplicates.isEmpty {
-          throw RepositoryError.duplicateIDs(ids: duplicates)
-        }
-
-        roots = loaded
-        rootsByID = Dictionary(uniqueKeysWithValues: loaded.map { ($0.id, $0) })
+        roots = loadedSnapshot.roots
+        rootsByID = loadedSnapshot.rootsByID
         loadError = nil
         startupIssue = nil
       } catch {
@@ -133,7 +133,7 @@ final class WordRootRepository: ObservableObject {
   }
 
   nonisolated static func loadRoots(from bundle: Bundle) throws -> [WordRoot] {
-    // NOTE: Duplicate ID validation is handled in `load(...)` before building the ID map,
+    // NOTE: Duplicate ID validation is handled during background loading,
     // so we can surface a friendly, recoverable startup error instead of trapping.
 
     let resourceName = "wordRoots.json"
@@ -146,7 +146,7 @@ final class WordRootRepository: ObservableObject {
 
     let data: Data
     do {
-      data = try Data(contentsOf: url)
+      data = try Data(contentsOf: url, options: [.mappedIfSafe])
     } catch {
       throw RepositoryError.fileReadFailed(
         filePath: url.path,
@@ -169,7 +169,7 @@ final class WordRootRepository: ObservableObject {
     }
   }
 
-  private nonisolated static func loadRootsInBackground(bundlePath: String) async throws -> [WordRoot] {
+  private nonisolated static func loadRootsInBackground(bundlePath: String) async throws -> LoadedRootsSnapshot {
     try await withCheckedThrowingContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
         do {
@@ -179,7 +179,20 @@ final class WordRootRepository: ObservableObject {
               bundlePath: bundlePath
             )
           }
-          continuation.resume(returning: try loadRoots(from: bundle))
+
+          let loadedRoots = try loadRoots(from: bundle)
+          let duplicateIDs = findDuplicateIDs(in: loadedRoots)
+          if !duplicateIDs.isEmpty {
+            throw RepositoryError.duplicateIDs(ids: duplicateIDs)
+          }
+
+          let rootsByID = Dictionary(uniqueKeysWithValues: loadedRoots.map { ($0.id, $0) })
+          continuation.resume(
+            returning: LoadedRootsSnapshot(
+              roots: loadedRoots,
+              rootsByID: rootsByID
+            )
+          )
         } catch {
           continuation.resume(throwing: error)
         }

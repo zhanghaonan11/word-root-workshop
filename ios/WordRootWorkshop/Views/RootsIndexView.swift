@@ -7,6 +7,11 @@ struct RootsIndexView: View {
     let searchableText: String
   }
 
+  private static let searchQueue = DispatchQueue(
+    label: "com.shan.wordrootworkshop.search",
+    qos: .userInitiated
+  )
+
   @EnvironmentObject private var repository: WordRootRepository
   @EnvironmentObject private var progressStore: ProgressStore
 
@@ -14,11 +19,19 @@ struct RootsIndexView: View {
   @State private var selectedCategory: WordRootCategory = .all
   @State private var indexedRoots: [SearchEntry] = []
   @State private var filteredRoots: [WordRoot] = []
+  @State private var isFiltering = false
+
+  @State private var indexingWorkItem: DispatchWorkItem?
+  @State private var filteringWorkItem: DispatchWorkItem?
+  @State private var indexingToken = 0
+  @State private var filteringToken = 0
 
   var body: some View {
     Group {
       if let loadError = repository.loadError {
         ContentUnavailableView("数据加载失败", systemImage: "exclamationmark.triangle", description: Text(loadError))
+      } else if isFiltering, filteredRoots.isEmpty {
+        ProgressView("筛选中...")
       } else if filteredRoots.isEmpty {
         ContentUnavailableView(
           query.isEmpty ? "暂无可显示的词根" : "未找到匹配结果",
@@ -81,41 +94,87 @@ struct RootsIndexView: View {
     }
     .onAppear {
       rebuildSearchIndex()
-      refilter()
     }
-    .onChange(of: query) { _, _ in refilter() }
-    .onChange(of: selectedCategory) { _, _ in refilter() }
+    .onDisappear {
+      indexingWorkItem?.cancel()
+      filteringWorkItem?.cancel()
+    }
+    .onChange(of: query) { _, _ in
+      scheduleRefilter()
+    }
+    .onChange(of: selectedCategory) { _, _ in
+      scheduleRefilter()
+    }
     .onChange(of: repository.roots) { _, _ in
       rebuildSearchIndex()
-      refilter()
     }
-    .animation(DesignSystem.Motion.standard, value: filteredRoots.count)
   }
 
-  private func refilter() {
+  private func scheduleRefilter(immediate: Bool = false) {
+    filteringWorkItem?.cancel()
+
+    filteringToken &+= 1
+    let token = filteringToken
     let keyword = normalizedQuery
+    let selectedCategory = selectedCategory
+    let indexedRoots = indexedRoots
 
-    filteredRoots = indexedRoots.compactMap { entry in
-      guard selectedCategory == .all || entry.category == selectedCategory else {
-        return nil
+    isFiltering = true
+
+    let workItem = DispatchWorkItem {
+      let results = indexedRoots.compactMap { entry -> WordRoot? in
+        guard selectedCategory == .all || entry.category == selectedCategory else {
+          return nil
+        }
+
+        guard keyword.isEmpty || entry.searchableText.contains(keyword) else {
+          return nil
+        }
+
+        return entry.root
       }
 
-      guard keyword.isEmpty || entry.searchableText.contains(keyword) else {
-        return nil
+      DispatchQueue.main.async {
+        guard token == filteringToken else { return }
+        filteredRoots = results
+        isFiltering = false
       }
-
-      return entry.root
     }
+
+    filteringWorkItem = workItem
+
+    let delaySeconds = immediate ? 0.0 : 0.12
+    Self.searchQueue.asyncAfter(deadline: .now() + delaySeconds, execute: workItem)
   }
 
   private func rebuildSearchIndex() {
-    indexedRoots = repository.roots.map { root in
-      SearchEntry(
-        root: root,
-        category: root.category,
-        searchableText: buildSearchableText(for: root)
-      )
+    indexingWorkItem?.cancel()
+    filteringWorkItem?.cancel()
+
+    indexingToken &+= 1
+    let token = indexingToken
+    let roots = repository.roots
+
+    isFiltering = true
+
+    let workItem = DispatchWorkItem {
+      let entries = roots.map { root in
+        SearchEntry(
+          root: root,
+          category: root.category,
+          searchableText: Self.buildSearchableText(for: root)
+        )
+      }
+
+      DispatchQueue.main.async {
+        guard token == indexingToken else { return }
+        indexedRoots = entries
+        scheduleRefilter(immediate: true)
+      }
     }
+
+    indexingWorkItem = workItem
+    Self.searchQueue.async(execute: workItem)
   }
 
   private var normalizedQuery: String {
@@ -124,7 +183,7 @@ struct RootsIndexView: View {
       .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
   }
 
-  private func buildSearchableText(for root: WordRoot) -> String {
+  private static func buildSearchableText(for root: WordRoot) -> String {
     let baseSegments = [root.root, root.origin, root.meaning, root.description]
     let exampleSegments = root.examples.flatMap { example in
       [example.word, example.meaning, example.explanation]

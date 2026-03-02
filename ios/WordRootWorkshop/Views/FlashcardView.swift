@@ -7,6 +7,8 @@ struct FlashcardView: View {
   @EnvironmentObject private var repository: WordRootRepository
   @EnvironmentObject private var progressStore: ProgressStore
 
+  @StateObject private var haptics = FlashcardHaptics()
+
   @State private var currentIndex = 0
   @State private var isFlipped = false
   @State private var dragOffset: CGFloat = 0
@@ -46,7 +48,7 @@ struct FlashcardView: View {
           withAnimation(DesignSystem.Motion.standard) {
             isFlipped.toggle()
           }
-          hapticLight()
+          haptics.light()
         } label: {
           FlashcardContent(root: root, isFlipped: isFlipped)
         }
@@ -56,7 +58,6 @@ struct FlashcardView: View {
         .accessibilityHint("双击可在正反面之间切换")
         .offset(x: dragOffset)
         .rotationEffect(.degrees(Double(dragOffset / 30)))
-        .animation(DesignSystem.Motion.spring, value: dragOffset)
         .simultaneousGesture(
           DragGesture(minimumDistance: 16)
             .onChanged(handleCardDragChanged)
@@ -75,7 +76,10 @@ struct FlashcardView: View {
     .padding(DesignSystem.Spacing.page)
     .navigationTitle("闪卡")
     .screenBackground()
-    .onAppear(perform: syncCurrentIndex)
+    .onAppear {
+      syncCurrentIndex()
+      haptics.prepare()
+    }
     .onChange(of: repository.roots.count) { _, _ in
       syncCurrentIndex()
     }
@@ -179,13 +183,18 @@ struct FlashcardView: View {
     guard let root = currentRoot else { return }
     guard !progressStore.isMastered(rootID: root.id) else { return }
     progressStore.markRootAsMastered(root.id)
-    hapticSuccess()
+    haptics.success()
     nextCard()
   }
 
   private func handleCardDragChanged(_ value: DragGesture.Value) {
     guard canNavigate else { return }
-    dragOffset = value.translation.width
+
+    var transaction = Transaction()
+    transaction.animation = nil
+    withTransaction(transaction) {
+      dragOffset = value.translation.width
+    }
   }
 
   private func handleCardDragEnded(_ value: DragGesture.Value) {
@@ -195,31 +204,19 @@ struct FlashcardView: View {
     }
 
     let threshold: CGFloat = 80
-    if value.translation.width < -threshold {
+    let projectedTranslation = value.predictedEndTranslation.width
+
+    if projectedTranslation < -threshold {
       nextCard()
-      hapticLight()
-    } else if value.translation.width > threshold {
+      haptics.light()
+    } else if projectedTranslation > threshold {
       prevCard()
-      hapticLight()
+      haptics.light()
     } else {
       withAnimation(DesignSystem.Motion.spring) {
         dragOffset = 0
       }
     }
-  }
-
-  private func hapticLight() {
-    #if canImport(UIKit)
-    let generator = UIImpactFeedbackGenerator(style: .light)
-    generator.impactOccurred()
-    #endif
-  }
-
-  private func hapticSuccess() {
-    #if canImport(UIKit)
-    let generator = UINotificationFeedbackGenerator()
-    generator.notificationOccurred(.success)
-    #endif
   }
 }
 
@@ -306,5 +303,34 @@ private struct FlashcardContent: View {
     .accessibilityElement(children: .combine)
     .accessibilityLabel("词根卡片背面")
     .accessibilityValue("\(root.root) 的解释与例词")
+  }
+}
+
+@MainActor
+private final class FlashcardHaptics: ObservableObject {
+  #if canImport(UIKit)
+  private let impactGenerator = UIImpactFeedbackGenerator(style: .light)
+  private let notificationGenerator = UINotificationFeedbackGenerator()
+  #endif
+
+  func prepare() {
+    #if canImport(UIKit)
+    impactGenerator.prepare()
+    notificationGenerator.prepare()
+    #endif
+  }
+
+  func light() {
+    #if canImport(UIKit)
+    impactGenerator.impactOccurred()
+    impactGenerator.prepare()
+    #endif
+  }
+
+  func success() {
+    #if canImport(UIKit)
+    notificationGenerator.notificationOccurred(.success)
+    notificationGenerator.prepare()
+    #endif
   }
 }
