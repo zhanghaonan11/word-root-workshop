@@ -1,4 +1,16 @@
 import SwiftUI
+import OSLog
+
+
+#if DEBUG
+private enum RootsIndexPerfLog {
+  private static let logger = Logger(subsystem: "com.shan.wordrootworkshop", category: "RootsIndexPerf")
+
+  static func mark(_ name: String, ms: Double, count: Int) {
+    logger.debug("\(name, privacy: .public) \(ms, format: .fixed(precision: 2))ms count=\(count)")
+  }
+}
+#endif
 
 struct RootsIndexView: View {
   private typealias SearchEntry = WordRootRepository.SearchIndexRecord
@@ -132,6 +144,9 @@ struct RootsIndexView: View {
     isFiltering = true
 
     let workItem = DispatchWorkItem {
+      #if DEBUG
+      let filterStart = ContinuousClock.now
+      #endif
       let results = indexedRoots.compactMap { entry -> SearchEntry? in
         guard selectedCategory == .all || entry.category == selectedCategory else {
           return nil
@@ -148,6 +163,11 @@ struct RootsIndexView: View {
         guard token == filteringToken else { return }
         filteredRoots = results
         isFiltering = false
+        #if DEBUG
+        let elapsed = filterStart.duration(to: .now).components
+        let ms = Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1_000_000_000_000_000
+        RootsIndexPerfLog.mark("filter", ms: ms, count: results.count)
+        #endif
       }
     }
 
@@ -168,9 +188,17 @@ struct RootsIndexView: View {
     isFiltering = true
 
     let workItem = DispatchWorkItem {
+      #if DEBUG
+      let indexStart = ContinuousClock.now
+      #endif
       DispatchQueue.main.async {
         guard token == indexingToken else { return }
         indexedRoots = sourceEntries
+        #if DEBUG
+        let elapsed = indexStart.duration(to: .now).components
+        let ms = Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1_000_000_000_000_000
+        RootsIndexPerfLog.mark("index apply", ms: ms, count: sourceEntries.count)
+        #endif
         scheduleRefilter(immediate: true)
       }
     }
