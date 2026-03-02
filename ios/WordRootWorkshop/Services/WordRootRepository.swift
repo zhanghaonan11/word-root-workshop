@@ -1,8 +1,27 @@
 import CryptoKit
 import Foundation
+import OSLog
 
 private let wordRootsCacheSchemaVersion = 1
 private let wordRootsCacheFileName = "word_roots_cache_v1.plist"
+
+#if DEBUG
+private enum RepositoryPerfLog {
+  private static let logger = Logger(subsystem: "com.shan.wordrootworkshop", category: "RepositoryPerf")
+
+  static func beginLoad(bundlePath: String) -> ContinuousClock.Instant {
+    let start = ContinuousClock.now
+    logger.debug("load begin bundle=\(bundlePath, privacy: .public)")
+    return start
+  }
+
+  static func mark(_ name: String, from start: ContinuousClock.Instant) {
+    let elapsed = start.duration(to: .now).components
+    let ms = Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1_000_000_000_000_000
+    logger.debug("\(name, privacy: .public) +\(ms, format: .fixed(precision: 2))ms")
+  }
+}
+#endif
 
 @MainActor
 final class WordRootRepository: ObservableObject {
@@ -190,6 +209,10 @@ final class WordRootRepository: ObservableObject {
   private nonisolated static func loadRootsInBackground(bundlePath: String) async throws -> LoadedRootsSnapshot {
     try await withCheckedThrowingContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
+        #if DEBUG
+        let perfStart = RepositoryPerfLog.beginLoad(bundlePath: bundlePath)
+        #endif
+
         do {
           guard let bundle = Bundle(path: bundlePath) else {
             throw RepositoryError.resourceMissing(
@@ -201,6 +224,9 @@ final class WordRootRepository: ObservableObject {
           let resourceURL = try resourceURL(in: bundle)
           let sourceData = try readResourceData(from: resourceURL)
           let sourceDigest = digestHex(for: sourceData)
+          #if DEBUG
+          RepositoryPerfLog.mark("resource read+digest", from: perfStart)
+          #endif
 
           let loadedRoots: [WordRoot]
           let loadedSearchIndex: [SearchIndexRecord]
@@ -209,6 +235,9 @@ final class WordRootRepository: ObservableObject {
              payload.schemaVersion == wordRootsCacheSchemaVersion,
              payload.sourceDigest == sourceDigest {
             loadedRoots = payload.roots
+            #if DEBUG
+            RepositoryPerfLog.mark("cache hit decode", from: perfStart)
+            #endif
 
             if payload.searchIndex.count == payload.roots.count {
               loadedSearchIndex = payload.searchIndex
@@ -226,6 +255,9 @@ final class WordRootRepository: ObservableObject {
           } else {
             loadedRoots = try decodeRoots(from: sourceData, filePath: resourceURL.path)
             loadedSearchIndex = buildSearchIndex(from: loadedRoots)
+            #if DEBUG
+            RepositoryPerfLog.mark("json decode+index build", from: perfStart)
+            #endif
 
             persistCache(
               PersistedCachePayload(
@@ -243,6 +275,9 @@ final class WordRootRepository: ObservableObject {
           }
 
           let rootsByID = Dictionary(uniqueKeysWithValues: loadedRoots.map { ($0.id, $0) })
+          #if DEBUG
+          RepositoryPerfLog.mark("dictionary build", from: perfStart)
+          #endif
           continuation.resume(
             returning: LoadedRootsSnapshot(
               roots: loadedRoots,
@@ -250,6 +285,9 @@ final class WordRootRepository: ObservableObject {
               searchIndex: loadedSearchIndex
             )
           )
+          #if DEBUG
+          RepositoryPerfLog.mark("load complete", from: perfStart)
+          #endif
         } catch {
           continuation.resume(throwing: error)
         }
