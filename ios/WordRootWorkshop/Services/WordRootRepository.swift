@@ -44,26 +44,43 @@ final class WordRootRepository: ObservableObject {
 
   private var rootsByID: [Int: WordRoot] = [:]
   private var loadTask: Task<Void, Never>?
+  private var cachedSnapshotsByBundlePath: [String: LoadedRootsSnapshot] = [:]
+  private var activeLoadBundlePath: String?
 
   init(bundle: Bundle = .main) {
     load(from: bundle)
   }
 
   func load(from bundle: Bundle = .main) {
-    loadTask?.cancel()
     let bundlePath = bundle.bundlePath
+
+    if let cachedSnapshot = cachedSnapshotsByBundlePath[bundlePath] {
+      applyLoadedSnapshot(cachedSnapshot)
+      return
+    }
+
+    if activeLoadBundlePath == bundlePath {
+      return
+    }
+
+    loadTask?.cancel()
+    activeLoadBundlePath = bundlePath
 
     loadTask = Task { [weak self] in
       guard let self else { return }
+
+      defer {
+        if activeLoadBundlePath == bundlePath {
+          activeLoadBundlePath = nil
+        }
+      }
 
       do {
         let loadedSnapshot = try await Self.loadRootsInBackground(bundlePath: bundlePath)
         guard !Task.isCancelled else { return }
 
-        roots = loadedSnapshot.roots
-        rootsByID = loadedSnapshot.rootsByID
-        loadError = nil
-        startupIssue = nil
+        cachedSnapshotsByBundlePath[bundlePath] = loadedSnapshot
+        applyLoadedSnapshot(loadedSnapshot)
       } catch {
         guard !Task.isCancelled else { return }
 
@@ -78,6 +95,13 @@ final class WordRootRepository: ObservableObject {
 
   func root(for id: Int) -> WordRoot? {
     rootsByID[id]
+  }
+
+  private func applyLoadedSnapshot(_ loadedSnapshot: LoadedRootsSnapshot) {
+    roots = loadedSnapshot.roots
+    rootsByID = loadedSnapshot.rootsByID
+    loadError = nil
+    startupIssue = nil
   }
 
   nonisolated static func makeStartupIssue(from error: RepositoryError) -> StartupIssue {

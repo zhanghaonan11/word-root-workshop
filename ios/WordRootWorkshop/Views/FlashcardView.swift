@@ -11,7 +11,8 @@ struct FlashcardView: View {
 
   @State private var currentIndex = 0
   @State private var isFlipped = false
-  @State private var dragOffset: CGFloat = 0
+  @State private var restingDragOffset: CGFloat = 0
+  @GestureState private var dragTranslation: CGFloat = 0
 
   private var roots: [WordRoot] { repository.roots }
 
@@ -39,6 +40,26 @@ struct FlashcardView: View {
     return progressStore.isMastered(rootID: currentRoot.id)
   }
 
+  private var effectiveDragOffset: CGFloat {
+    guard canNavigate else { return 0 }
+    return restingDragOffset + dragTranslation
+  }
+
+  private var cardTiltAngle: Double {
+    let normalized = effectiveDragOffset / 26
+    let clamped = min(max(normalized, -12), 12)
+    return Double(clamped)
+  }
+
+  private var cardSwipeGesture: some Gesture {
+    DragGesture(minimumDistance: 16)
+      .updating($dragTranslation) { value, state, _ in
+        guard canNavigate else { return }
+        state = value.translation.width
+      }
+      .onEnded(handleCardDragEnded)
+  }
+
   var body: some View {
     VStack(spacing: DesignSystem.Spacing.section) {
       if let root = currentRoot {
@@ -56,13 +77,9 @@ struct FlashcardView: View {
         .accessibilityLabel("翻转卡片")
         .accessibilityValue(isFlipped ? "当前为背面" : "当前为正面")
         .accessibilityHint("双击可在正反面之间切换")
-        .offset(x: dragOffset)
-        .rotationEffect(.degrees(Double(dragOffset / 30)))
-        .simultaneousGesture(
-          DragGesture(minimumDistance: 16)
-            .onChanged(handleCardDragChanged)
-            .onEnded(handleCardDragEnded)
-        )
+        .offset(x: effectiveDragOffset)
+        .rotationEffect(.degrees(cardTiltAngle))
+        .simultaneousGesture(cardSwipeGesture)
 
         controlButtons
       } else if let loadError = repository.loadError {
@@ -156,27 +173,27 @@ struct FlashcardView: View {
     guard !roots.isEmpty else { return }
     currentIndex = min(max(progressStore.progress.currentRootIndex, 0), roots.count - 1)
     isFlipped = false
-    dragOffset = 0
+    restingDragOffset = 0
   }
 
   private func nextCard() {
     guard !roots.isEmpty else { return }
     withAnimation(DesignSystem.Motion.spring) {
       currentIndex = (safeIndex + 1) % roots.count
+      restingDragOffset = 0
     }
     progressStore.setCurrentRootIndex(currentIndex)
     isFlipped = false
-    dragOffset = 0
   }
 
   private func prevCard() {
     guard !roots.isEmpty else { return }
     withAnimation(DesignSystem.Motion.spring) {
       currentIndex = (safeIndex - 1 + roots.count) % roots.count
+      restingDragOffset = 0
     }
     progressStore.setCurrentRootIndex(currentIndex)
     isFlipped = false
-    dragOffset = 0
   }
 
   private func markKnown() {
@@ -187,19 +204,9 @@ struct FlashcardView: View {
     nextCard()
   }
 
-  private func handleCardDragChanged(_ value: DragGesture.Value) {
-    guard canNavigate else { return }
-
-    var transaction = Transaction()
-    transaction.animation = nil
-    withTransaction(transaction) {
-      dragOffset = value.translation.width
-    }
-  }
-
   private func handleCardDragEnded(_ value: DragGesture.Value) {
     guard canNavigate else {
-      dragOffset = 0
+      restingDragOffset = 0
       return
     }
 
@@ -213,8 +220,9 @@ struct FlashcardView: View {
       prevCard()
       haptics.light()
     } else {
+      restingDragOffset = value.translation.width
       withAnimation(DesignSystem.Motion.spring) {
-        dragOffset = 0
+        restingDragOffset = 0
       }
     }
   }
