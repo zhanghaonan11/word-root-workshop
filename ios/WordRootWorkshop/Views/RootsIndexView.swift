@@ -123,7 +123,7 @@ struct RootsIndexView: View {
       filteringWorkItem?.cancel()
       isFiltering = false
       if !didReportFirstInteractive {
-        firstInteractiveSpan = nil
+        abortFirstInteractiveIfNeeded(reason: "viewDisappear")
       }
     }
     .onChange(of: query) { _, _ in
@@ -232,6 +232,15 @@ struct RootsIndexView: View {
     PerformanceInstrumentation.end(
       span,
       detail: "results=\(count) total=\(indexedRoots.count)"
+    )
+  }
+
+  private func abortFirstInteractiveIfNeeded(reason: String) {
+    guard let span = firstInteractiveSpan else { return }
+    firstInteractiveSpan = nil
+    PerformanceInstrumentation.end(
+      span,
+      detail: "aborted=\(reason)"
     )
   }
 

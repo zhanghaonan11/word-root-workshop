@@ -91,7 +91,7 @@ struct FlashcardView: View {
     }
     .onDisappear {
       if !didReportFirstDisplay {
-        firstDisplaySpan = nil
+        abortFirstDisplayIfNeeded(reason: "viewDisappear")
       }
     }
     .onChange(of: repository.roots.count) { _, _ in
@@ -113,6 +113,15 @@ struct FlashcardView: View {
     PerformanceInstrumentation.end(
       span,
       detail: "index=\(displayIndex) total=\(roots.count)"
+    )
+  }
+
+  private func abortFirstDisplayIfNeeded(reason: String) {
+    guard let span = firstDisplaySpan else { return }
+    firstDisplaySpan = nil
+    PerformanceInstrumentation.end(
+      span,
+      detail: "aborted=\(reason)"
     )
   }
 
