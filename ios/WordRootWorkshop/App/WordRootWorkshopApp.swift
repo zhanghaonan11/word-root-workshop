@@ -5,7 +5,10 @@ struct WordRootWorkshopApp: App {
   @Environment(\.scenePhase) private var scenePhase
   @State private var didReportStartup = false
 
-  private static let startupSpan = PerformanceInstrumentation.begin(.appStartup)
+  private static let startupSpan = PerformanceSpan(
+    metric: .appStartup,
+    start: ContinuousClock.now
+  )
 
   @StateObject private var repository = WordRootRepository()
   @StateObject private var progressStore = ProgressStore()
