@@ -3,22 +3,23 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		0A07829C82D9E38F5B1079E8 /* RootDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09E82F22572232F5C8C23C0 /* RootDetailView.swift */; };
 		2BE42624B1748F34DB3A8E79 /* WordRootWorkshopTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9865494E7D74BBC237EB128 /* WordRootWorkshopTests.swift */; };
 		497F8687716973DA9298FE60 /* ProgressDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459C73B076811203CE171F38 /* ProgressDashboardView.swift */; };
+		554FA0B3DE8C1BD728453D7D /* PerformanceInstrumentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A013AC4A847C143EF9B6EDDA /* PerformanceInstrumentation.swift */; };
 		6073EAFEEE638F63BB878582 /* QuizSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8965901BDF61FBE17C066EE /* QuizSectionView.swift */; };
 		6DFEF95EAB79E81887B79A80 /* ProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2733F48397593BEDFCD3D3B0 /* ProgressModels.swift */; };
-		74395FC72F51284000C15C77 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74395FC62F51284000C15C77 /* DesignSystem.swift */; };
 		85FEB8B894BFCC14E36D4127 /* WordRootRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0F1F9EDCF0E3E7B5D49768B /* WordRootRepository.swift */; };
 		8EF14930CA00000B6ED2D032 /* ProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A41335C6778E331DAD96F4 /* ProgressStore.swift */; };
 		9DDE0E68450D1AD90E08763F /* FlashcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8BAB12B08EF91AB87B049 /* FlashcardView.swift */; };
 		AE9C73E66035A11C245DB3DE /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068785B7A3376B664D29903C /* RootTabView.swift */; };
 		B65B6B73945D12FBAD79C1FB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2AE21A2BBB0B9095FC121E18 /* Assets.xcassets */; };
 		BA0F4E55210B0EBC9781836F /* RootUIComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16D9C49B19E15C3D8A1AC396 /* RootUIComponents.swift */; };
+		BD6D5BF1100E2C9EF5B40F65 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6383E683FCF937480E194F55 /* DesignSystem.swift */; };
 		C6177963EAB07ED60C4CAD76 /* RootsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4709E530F807AA4609D7B2D /* RootsIndexView.swift */; };
 		E23A90FED06E27B48A7A65B6 /* wordRoots.json in Resources */ = {isa = PBXBuildFile; fileRef = 98B69C5FF311FB65AA2E942C /* wordRoots.json */; };
 		E4FC6A4D6805592D1953679B /* WordRootModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFC71CA642862DF893055C5E /* WordRootModels.swift */; };
@@ -41,15 +42,16 @@
 		16D9C49B19E15C3D8A1AC396 /* RootUIComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootUIComponents.swift; sourceTree = "<group>"; };
 		2733F48397593BEDFCD3D3B0 /* ProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressModels.swift; sourceTree = "<group>"; };
 		2AE21A2BBB0B9095FC121E18 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		3F24F24068C2A29EB9294FDD /* WordRootWorkshop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WordRootWorkshop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F24F24068C2A29EB9294FDD /* WordRootWorkshop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WordRootWorkshop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		459C73B076811203CE171F38 /* ProgressDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressDashboardView.swift; sourceTree = "<group>"; };
 		52A41335C6778E331DAD96F4 /* ProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressStore.swift; sourceTree = "<group>"; };
 		5CE8BAB12B08EF91AB87B049 /* FlashcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardView.swift; sourceTree = "<group>"; };
+		6383E683FCF937480E194F55 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		6799721DD6F07497C3742B8E /* LearnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnView.swift; sourceTree = "<group>"; };
-		74395FC62F51284000C15C77 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		9613ACB0E162C0D55D6A049E /* WordRootWorkshopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordRootWorkshopApp.swift; sourceTree = "<group>"; };
 		98B69C5FF311FB65AA2E942C /* wordRoots.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wordRoots.json; sourceTree = "<group>"; };
 		9A871087A643E1FB333EAABF /* WordRootWorkshopTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WordRootWorkshopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A013AC4A847C143EF9B6EDDA /* PerformanceInstrumentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceInstrumentation.swift; sourceTree = "<group>"; };
 		A9865494E7D74BBC237EB128 /* WordRootWorkshopTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordRootWorkshopTests.swift; sourceTree = "<group>"; };
 		AFC71CA642862DF893055C5E /* WordRootModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordRootModels.swift; sourceTree = "<group>"; };
 		B4709E530F807AA4609D7B2D /* RootsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootsIndexView.swift; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 		C3CC4A3C3AF691F83BA3BA00 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A013AC4A847C143EF9B6EDDA /* PerformanceInstrumentation.swift */,
 				52A41335C6778E331DAD96F4 /* ProgressStore.swift */,
 				F0F1F9EDCF0E3E7B5D49768B /* WordRootRepository.swift */,
 			);
@@ -127,6 +130,7 @@
 		EA69E0C308E623024A414EC7 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6383E683FCF937480E194F55 /* DesignSystem.swift */,
 				5CE8BAB12B08EF91AB87B049 /* FlashcardView.swift */,
 				6799721DD6F07497C3742B8E /* LearnView.swift */,
 				459C73B076811203CE171F38 /* ProgressDashboardView.swift */,
@@ -134,7 +138,6 @@
 				F09E82F22572232F5C8C23C0 /* RootDetailView.swift */,
 				B4709E530F807AA4609D7B2D /* RootsIndexView.swift */,
 				16D9C49B19E15C3D8A1AC396 /* RootUIComponents.swift */,
-				74395FC62F51284000C15C77 /* DesignSystem.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -195,6 +198,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					72D81A7BF9105800DC3FCC5E = {
+						DevelopmentTeam = 9TZ939ZKK7;
+					};
+				};
 			};
 			buildConfigurationList = 09F5D526C1DB75D53BB1FB3E /* Build configuration list for PBXProject "WordRootWorkshop" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -206,6 +214,7 @@
 			);
 			mainGroup = F44057D5FBEA1D4AE214D069;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -240,11 +249,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD6D5BF1100E2C9EF5B40F65 /* DesignSystem.swift in Sources */,
 				9DDE0E68450D1AD90E08763F /* FlashcardView.swift in Sources */,
 				ED3C5090A45BA0FC1CD669EF /* LearnView.swift in Sources */,
+				554FA0B3DE8C1BD728453D7D /* PerformanceInstrumentation.swift in Sources */,
 				497F8687716973DA9298FE60 /* ProgressDashboardView.swift in Sources */,
 				6DFEF95EAB79E81887B79A80 /* ProgressModels.swift in Sources */,
-				74395FC72F51284000C15C77 /* DesignSystem.swift in Sources */,
 				8EF14930CA00000B6ED2D032 /* ProgressStore.swift in Sources */,
 				6073EAFEEE638F63BB878582 /* QuizSectionView.swift in Sources */,
 				0A07829C82D9E38F5B1079E8 /* RootDetailView.swift in Sources */,

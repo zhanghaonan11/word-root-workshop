@@ -10,6 +10,8 @@ struct FlashcardView: View {
   @StateObject private var haptics = FlashcardHaptics()
 
   @State private var currentIndex = 0
+  @State private var firstDisplaySpan: PerformanceSpan?
+  @State private var didReportFirstDisplay = false
 
   private var roots: [WordRoot] { repository.roots }
 
@@ -79,12 +81,39 @@ struct FlashcardView: View {
     .navigationTitle("闪卡")
     .screenBackground()
     .onAppear {
+      if !didReportFirstDisplay, firstDisplaySpan == nil {
+        firstDisplaySpan = PerformanceInstrumentation.begin(.flashcardFirstDisplay)
+      }
+
       syncCurrentIndex()
       haptics.prepare()
+      reportFirstDisplayIfNeeded()
+    }
+    .onDisappear {
+      if !didReportFirstDisplay {
+        firstDisplaySpan = nil
+      }
     }
     .onChange(of: repository.roots.count) { _, _ in
       syncCurrentIndex()
+      reportFirstDisplayIfNeeded()
     }
+    .onChange(of: currentRoot?.id) { _, _ in
+      reportFirstDisplayIfNeeded()
+    }
+  }
+
+  private func reportFirstDisplayIfNeeded() {
+    guard !didReportFirstDisplay else { return }
+    guard currentRoot != nil else { return }
+    guard let span = firstDisplaySpan else { return }
+
+    didReportFirstDisplay = true
+    firstDisplaySpan = nil
+    PerformanceInstrumentation.end(
+      span,
+      detail: "index=\(displayIndex) total=\(roots.count)"
+    )
   }
 
   private var headerCard: some View {

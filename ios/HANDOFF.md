@@ -1,10 +1,10 @@
-# iOS Handoff — WordRootWorkshop (2026-03-02)
+# iOS Handoff — WordRootWorkshop (2026-03-03)
 
 This document summarizes the work completed in the iOS app and what to do next.
 
 Repo path: `/Users/shan/github/word-root-workshop/ios`
 Remote: `origin https://github.com/zhanghaonan11/word-root-workshop.git`
-Branch baseline: `main` (v0.1–v0.3)
+Branch baseline: `main` (v0.1–v0.4)
 
 ## Goals
 
@@ -104,6 +104,43 @@ Rollback points:
 - Partial rollback option A: revert `WordRootWorkshop/Views/QuizSectionView.swift` + `WordRootWorkshop/Views/LearnView.swift`.
 - Partial rollback option B: revert `WordRootWorkshop/Services/ProgressStore.swift` if only data-normalization behavior needs to be removed.
 
+### v0.5 (tag: `v0.5`)
+
+Focus (chosen from suggested next iteration):
+- `1) Measurement-driven performance`
+
+Acceptance criteria:
+- Add lightweight instrumentation for startup, RootsIndex first-interactive, and Flashcard first-display.
+- Prefer signpost/logger + simple timestamp deltas.
+- Keep instrumentation compile-safe for iOS Simulator and low-overhead.
+- Local iOS simulator generic build passes.
+
+Key points:
+- Added `PerformanceInstrumentation` with unified `OSSignposter + Logger + timestamp delta` wrappers.
+- `WordRootWorkshopApp`: startup interval measured from app launch to `RootTabView` first appearance.
+- `RootsIndexView`: first-interactive interval measured from first appear to first usable filtered result state.
+- `FlashcardView`: first-display interval measured from first appear to first visible card.
+- `project.yml`: excludes `WordRootWorkshop/App/DesignSystem.swift` to avoid duplicate compilation output conflict with `Views/DesignSystem.swift`; regenerated `WordRootWorkshop.xcodeproj`.
+
+Primary files touched:
+- `WordRootWorkshop/Services/PerformanceInstrumentation.swift`
+- `WordRootWorkshop/App/WordRootWorkshopApp.swift`
+- `WordRootWorkshop/Views/RootsIndexView.swift`
+- `WordRootWorkshop/Views/FlashcardView.swift`
+- `project.yml`
+- `WordRootWorkshop.xcodeproj/project.pbxproj`
+- `CHANGELOG.md`
+- `HANDOFF.md`
+
+Performance/interaction impact:
+- Performance visibility: key user-facing phases now have comparable, repeatable timing markers in logs/signposts.
+- Runtime overhead: instrumentation path is DEBUG-focused and event-driven (no hot-loop polling), minimizing UI impact.
+
+Rollback points:
+- Full rollback: revert the v0.5 commit (or reset to tag `v0.4`).
+- Partial rollback option A: revert `WordRootWorkshop/Services/PerformanceInstrumentation.swift` and related call sites.
+- Partial rollback option B: keep instrumentation but revert only `project.yml`/`WordRootWorkshop.xcodeproj` if project-generation policy changes.
+
 ## Verification
 
 Each version’s `CHANGELOG.md` entry records a local build verification command, e.g.:
@@ -118,15 +155,15 @@ xcodebuild -project WordRootWorkshop.xcodeproj \
 
 ## Current git state (local snapshot)
 
-- `main` baseline includes v0.1–v0.3.
-- v0.4 work exists on feature branch and tag context.
+- `main` baseline includes v0.1–v0.4.
+- v0.5 measurement instrumentation is implemented and build-verified locally.
 
-## Suggested next iteration (v0.5)
+## Suggested next iteration (v0.6)
 
 Pick 1–2 to keep scope safe:
 
-1) Measurement-driven performance:
-- Add lightweight startup/view timing instrumentation and align with Instruments baselines.
+1) Baseline measurement workflow:
+- Add a short repeatable profiling checklist (cold/warm launch, tab switch, first interaction) and target budget table.
 
 2) Small high-value features:
 - Search highlight, favorites/marks, review queue strategy.

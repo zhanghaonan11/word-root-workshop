@@ -35,6 +35,8 @@ struct RootsIndexView: View {
   @State private var indexingToken = 0
   @State private var filteringToken = 0
   @State private var lastFilterSignature = ""
+  @State private var firstInteractiveSpan: PerformanceSpan?
+  @State private var didReportFirstInteractive = false
 
   var body: some View {
     Group {
@@ -104,16 +106,25 @@ struct RootsIndexView: View {
       }
     }
     .onAppear {
+      if !didReportFirstInteractive, firstInteractiveSpan == nil {
+        firstInteractiveSpan = PerformanceInstrumentation.begin(.rootsIndexFirstInteractive)
+      }
+
       if indexedRoots.isEmpty {
         rebuildSearchIndex()
       } else {
         scheduleRefilter(immediate: true)
       }
+
+      reportFirstInteractiveIfNeeded()
     }
     .onDisappear {
       indexingWorkItem?.cancel()
       filteringWorkItem?.cancel()
       isFiltering = false
+      if !didReportFirstInteractive {
+        firstInteractiveSpan = nil
+      }
     }
     .onChange(of: query) { _, _ in
       scheduleRefilter()
@@ -163,6 +174,7 @@ struct RootsIndexView: View {
         guard token == filteringToken else { return }
         filteredRoots = results
         isFiltering = false
+        reportFirstInteractiveIfNeeded(resultCount: results.count)
         #if DEBUG
         let elapsed = filterStart.duration(to: .now).components
         let ms = Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1_000_000_000_000_000
@@ -205,6 +217,22 @@ struct RootsIndexView: View {
 
     indexingWorkItem = workItem
     Self.searchQueue.async(execute: workItem)
+  }
+
+  private func reportFirstInteractiveIfNeeded(resultCount: Int? = nil) {
+    guard !didReportFirstInteractive else { return }
+    guard !isFiltering else { return }
+    guard !indexedRoots.isEmpty else { return }
+    guard let span = firstInteractiveSpan else { return }
+
+    didReportFirstInteractive = true
+    firstInteractiveSpan = nil
+
+    let count = resultCount ?? filteredRoots.count
+    PerformanceInstrumentation.end(
+      span,
+      detail: "results=\(count) total=\(indexedRoots.count)"
+    )
   }
 
   private var normalizedQuery: String {

@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.5 - 2026-03-03
+
+### Added
+- 轻量性能埋点框架：新增 `PerformanceInstrumentation`，统一封装 `OSSignposter + Logger + timestamp delta`，仅在 DEBUG 输出，保持低开销。
+- DEBUG 启动阶段埋点：`WordRootWorkshopApp` 记录 App 启动到 `RootTabView` 首次出现耗时。
+- DEBUG `RootsIndexView` 首次可交互埋点：记录页面首次进入后到首轮筛选可展示状态的耗时，并附带结果/总数。
+- DEBUG `FlashcardView` 首次展示埋点：记录页面首次进入后到首张卡可显示耗时，并附带索引/总数。
+
+### Improved
+- 工程清单稳定性：`project.yml` 排除 `WordRootWorkshop/App/DesignSystem.swift` 编译源，避免与 `Views/DesignSystem.swift` 重名导致的 stringsdata 冲突（并同步更新 `WordRootWorkshop.xcodeproj`）。
+
+### Verified
+- 本地构建验证通过：
+  - `xcodebuild -project WordRootWorkshop.xcodeproj -scheme WordRootWorkshop -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData build`
+
 ## v0.4 - 2026-03-02
 
 ### Added

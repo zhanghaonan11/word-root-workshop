@@ -1,25 +1,11 @@
 import SwiftUI
-import OSLog
-
-#if DEBUG
-private enum AppStartupPerfLog {
-  private static let logger = Logger(subsystem: "com.shan.wordrootworkshop", category: "AppStartupPerf")
-
-  static func mark(_ name: String, from start: ContinuousClock.Instant) {
-    let elapsed = start.duration(to: .now).components
-    let ms = Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1_000_000_000_000_000
-    logger.debug("\(name, privacy: .public) +\(ms, format: .fixed(precision: 2))ms")
-  }
-}
-#endif
 
 @main
 struct WordRootWorkshopApp: App {
   @Environment(\.scenePhase) private var scenePhase
+  @State private var didReportStartup = false
 
-  #if DEBUG
-  private static let launchStart = ContinuousClock.now
-  #endif
+  private static let startupSpan = PerformanceInstrumentation.begin(.appStartup)
 
   @StateObject private var repository = WordRootRepository()
   @StateObject private var progressStore = ProgressStore()
@@ -28,11 +14,14 @@ struct WordRootWorkshopApp: App {
   var body: some Scene {
     WindowGroup {
       RootTabView()
-        #if DEBUG
         .onAppear {
-          AppStartupPerfLog.mark("RootTabView first appear", from: Self.launchStart)
+          guard !didReportStartup else { return }
+          didReportStartup = true
+          PerformanceInstrumentation.end(
+            Self.startupSpan,
+            detail: "RootTabView firstAppear"
+          )
         }
-        #endif
         .environmentObject(repository)
         .environmentObject(progressStore)
         .environmentObject(pronunciationService)
